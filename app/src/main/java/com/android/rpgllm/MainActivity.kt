@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.android.rpgllm.ui.theme.RPGLLMTheme // Importa o seu tema
+import com.android.rpgllm.ui.theme.RpgTextScreen // Importa RpgTextScreen do pacote ui.theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

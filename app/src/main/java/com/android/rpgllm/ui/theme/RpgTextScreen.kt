@@ -1,5 +1,5 @@
-// app/src/main/java/com/android/rpgllm/RpgTextScreen.kt
-package com.android.rpgllm
+// app/src/main/java/com/android/rpgllm/ui/theme/RpgTextScreen.kt
+package com.android.rpgllm.ui.theme // Pacote corrigido para ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -28,6 +28,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay // Importação explícita para delay
+import kotlin.random.Random // Importação explícita para Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +68,7 @@ fun RpgTextScreen() {
             "A floresta é densa e escura. Você ouve o farfalhar de folhas e o canto de pássaros desconhecidos. A cada passo, a luz do sol diminui, e a temperatura cai. Você continua a explorar a floresta ou retorna para a clareira?"
         )
         // Simula um atraso de rede
-        kotlinx.coroutines.delay(kotlin.random.Random.nextLong(1000, 3000))
+        delay(Random.nextLong(1000, 3000)) // Usando delay e Random importados explicitamente
         // Retorna uma resposta aleatória para simular a dinâmica
         responses.random()
     }
@@ -199,7 +201,7 @@ fun RpgTextScreen() {
             )
         }
 
-        // Campo de Entrada do Jogador
+// Campo de Entrada do Jogador
         OutlinedTextField(
             value = playerInput,
             onValueChange = { playerInput = it },
@@ -208,12 +210,14 @@ fun RpgTextScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
+            colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF00C853),
                 unfocusedBorderColor = Color(0xFF616161),
                 cursorColor = Color(0xFF00C853),
-                textColor = Color.White,
-                containerColor = Color(0xFF303030), // Cor de fundo do campo
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedContainerColor = Color(0xFF303030),
+                unfocusedContainerColor = Color(0xFF303030),
                 focusedLabelColor = Color(0xFF00C853),
                 unfocusedLabelColor = Color(0xFF9E9E9E)
             ),
