@@ -1,5 +1,5 @@
 // app/src/main/java/com/android/rpgllm/ui/theme/RpgTextScreen.kt
-package com.android.rpgllm.ui.theme // Pacote corrigido para ui.theme
+package com.android.rpgllm.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,15 +21,12 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import kotlinx.coroutines.delay // Importação explícita para delay
-import kotlin.random.Random // Importação explícita para Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,22 +54,6 @@ fun RpgTextScreen() {
         narrativeLines.add("Bem-vindo ao universo! Para começar, diga-me seu nome ou descreva o que você gostaria de ser.")
     }
 
-    // Função para simular a chamada à API do LLM (substituirá a chamada ao backend Python)
-    // No seu ambiente de produção, esta função faria uma requisição HTTP para o seu servidor Python.
-    val simulateLLMCall: suspend (String) -> String = { input ->
-        val responses = listOf(
-            "O vazio se distorce ao seu comando, Gabriel, e antes que perceba, o chão sob seus pés se torna sólido. Você se encontra em uma clareira úmida, onde a luz do sol mal penetra através da densa folhagem. No centro, há uma pedra musgosa e, sobre ela, algo brilha fracamente: um amuleto de quartzo polido, que parece vibrar com uma energia antiga. Ao longe, você ouve o murmúrio de um riacho escondido.",
-            "Você pega o amuleto, sentindo um calor suave irradiar dele. A clareira, antes silenciosa, parece sussurrar segredos antigos. O que você faz agora, Gabriel?",
-            "Ao se aproximar do riacho, a água cristalina reflete seu rosto, e você percebe que a correnteza é mais forte do que parece. Pequenos peixes prateados nadam contra a corrente. O que você decide fazer com o riacho?",
-            "Você bebe da água fresca, sentindo suas energias renovadas. O sabor é puro, como se viesse de uma fonte intocada. Uma sensação de bem-estar o envolve. Para onde você vai agora?",
-            "A floresta é densa e escura. Você ouve o farfalhar de folhas e o canto de pássaros desconhecidos. A cada passo, a luz do sol diminui, e a temperatura cai. Você continua a explorar a floresta ou retorna para a clareira?"
-        )
-        // Simula um atraso de rede
-        delay(Random.nextLong(1000, 3000)) // Usando delay e Random importados explicitamente
-        // Retorna uma resposta aleatória para simular a dinâmica
-        responses.random()
-    }
-
     // Função para lidar com o envio da ação do jogador
     val sendPlayerAction: () -> Unit = sendPlayerAction@{
         val currentInput = playerInput.trim()
@@ -89,38 +70,46 @@ fun RpgTextScreen() {
 
         coroutineScope.launch(Dispatchers.IO) {
             try {
-                // TODO: Substitua esta URL pela URL do seu backend Python
-                val url = URL("http://10.0.2.2:5000/execute_turn") // 10.0.2.2 é o IP do host para o emulador Android
+                // URL do backend Python. 10.0.2.2 é o IP do host para o emulador Android
+                val url = URL("http://10.0.2.2:5000/execute_turn")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Content-Type", "application/json; utf-8")
+                connection.setRequestProperty("Accept", "application/json")
                 connection.doOutput = true
+                connection.connectTimeout = 15000 // 15 segundos
+                connection.readTimeout = 60000 // 60 segundos
 
                 // Envia a ação do jogador como JSON
-                val jsonInputString = "{\"player_action\": \"$currentInput\"}"
-                OutputStreamWriter(connection.outputStream).use { writer ->
+                val jsonInputString = JSONObject().apply {
+                    put("player_action", currentInput)
+                }.toString()
+
+                OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
                     writer.write(jsonInputString)
+                    writer.flush()
                 }
 
-                // Lê a resposta do backend
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
-                    BufferedReader(InputStreamReader(connection.inputStream)).use { reader ->
-                        val response = reader.readText()
-                        // TODO: Parse a resposta JSON do seu backend para extrair a narrativa
-                        // Por enquanto, apenas exibe a resposta bruta
+                    BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { reader ->
+                        val responseBody = reader.readText()
+                        // **NOVO: Interpreta a resposta JSON do servidor**
+                        val responseJson = JSONObject(responseBody)
+                        val narrative = responseJson.optString("narrative", "Erro: 'narrative' não encontrada na resposta.")
+
                         withContext(Dispatchers.Main) {
-                            // Remove o indicador de "Mestre de Jogo pensando..."
                             if (narrativeLines.lastOrNull() == "Mestre de Jogo pensando...") {
                                 narrativeLines.removeAt(narrativeLines.lastIndex)
                             }
-                            narrativeLines.add("\n\n$response")
+                            narrativeLines.add("\n\n$narrative")
                         }
                     }
                 } else {
-                    val errorStream = BufferedReader(InputStreamReader(connection.errorStream)).use { it.readText() }
+                    val errorStream = connection.errorStream?.let {
+                        BufferedReader(InputStreamReader(it, "UTF-8")).use { reader -> reader.readText() }
+                    } ?: "Nenhuma informação de erro adicional."
                     withContext(Dispatchers.Main) {
-                        // Remove o indicador de "Mestre de Jogo pensando..."
                         if (narrativeLines.lastOrNull() == "Mestre de Jogo pensando...") {
                             narrativeLines.removeAt(narrativeLines.lastIndex)
                         }
@@ -129,14 +118,15 @@ fun RpgTextScreen() {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    // Remove o indicador de "Mestre de Jogo pensando..."
                     if (narrativeLines.lastOrNull() == "Mestre de Jogo pensando...") {
                         narrativeLines.removeAt(narrativeLines.lastIndex)
                     }
-                    narrativeLines.add("\n\n\u001b[1;31mErro de Conexão:\u001b[0m ${e.message}")
+                    narrativeLines.add("\n\n\u001b[1;31mErro de Conexão:\u001b[0m Verifique se o servidor Python está rodando e se o dispositivo tem acesso à rede. (${e.message})")
                 }
             } finally {
-                isLoading = false // Desativa o estado de carregamento
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                }
             }
         }
     }
@@ -164,11 +154,11 @@ fun RpgTextScreen() {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color(0xFF212121), RoundedCornerShape(12.dp)) // Fundo mais escuro com cantos arredondados
+                .background(Color(0xFF212121), RoundedCornerShape(12.dp))
                 .padding(12.dp),
             shape = RoundedCornerShape(12.dp),
             shadowElevation = 4.dp,
-            color = Color(0xFF212121) // Garante a cor de fundo da Surface
+            color = Color(0xFF212121)
         ) {
             LazyColumn(
                 state = listState,
@@ -177,7 +167,7 @@ fun RpgTextScreen() {
                 items(narrativeLines) { line ->
                     Text(
                         text = line,
-                        color = Color(0xFFE0E0E0), // Texto claro
+                        color = Color(0xFFE0E0E0),
                         fontSize = 16.sp,
                         fontFamily = FontFamily.Monospace,
                         lineHeight = 20.sp,
@@ -187,21 +177,20 @@ fun RpgTextScreen() {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp)) // Espaço entre a narrativa e o input
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Indicador de carregamento
         if (isLoading) {
             LinearProgressIndicator(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp)
                     .padding(bottom = 8.dp),
-                color = Color(0xFF00C853), // Cor do progresso
-                trackColor = Color(0xFF303030) // Cor da trilha
+                color = Color(0xFF00C853),
+                trackColor = Color(0xFF303030)
             )
         }
 
-// Campo de Entrada do Jogador
+        // Campo de Entrada do Jogador
         OutlinedTextField(
             value = playerInput,
             onValueChange = { playerInput = it },
@@ -227,7 +216,7 @@ fun RpgTextScreen() {
             keyboardActions = KeyboardActions(
                 onSend = { sendPlayerAction() }
             ),
-            enabled = !isLoading // Desabilita quando estiver carregando
+            enabled = !isLoading
         )
 
         // Botão de Envio
@@ -236,9 +225,9 @@ fun RpgTextScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            enabled = !isLoading, // Desabilita quando estiver carregando
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)), // Cor do botão
-            shape = RoundedCornerShape(12.dp), // Cantos arredondados
+            enabled = !isLoading,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+            shape = RoundedCornerShape(12.dp),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
         ) {
             Text(
