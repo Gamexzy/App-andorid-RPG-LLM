@@ -1,8 +1,9 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/GameViewModel.kt
-package com.android.rpgllm.ui.theme
+// app/src/main/java/com/android/rpgllm/data/GameViewModel.kt
+package com.android.rpgllm.data // PACOTE ATUALIZADO
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.android.rpgllm.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,63 +17,88 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
+// Enum para controlar o status da verificação de versão
+enum class VersionStatus {
+    CHECKING,
+    UP_TO_DATE,
+    OUTDATED,
+    ERROR
+}
+
 class GameViewModel : ViewModel() {
 
-    // --- Estado da UI ---
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
-    // --- Estado do Modo de Conexão ---
     private val _isEmulatorMode = MutableStateFlow(false)
     val isEmulatorMode: StateFlow<Boolean> = _isEmulatorMode.asStateFlow()
 
+    private val _customIpAddress = MutableStateFlow("")
+    val customIpAddress: StateFlow<String> = _customIpAddress.asStateFlow()
+
+    private val _versionStatus = MutableStateFlow(VersionStatus.CHECKING)
+    val versionStatus: StateFlow<VersionStatus> = _versionStatus.asStateFlow()
+
     private val emulatorIp = "10.0.2.2"
-    private val physicalDeviceIp = "192.168.0.104" // IP do seu PC
+    private val physicalDeviceIp = "192.168.0.104"
 
     init {
-        // Adiciona a mensagem inicial ao carregar o ViewModel
         _gameState.update {
             it.copy(narrativeLines = listOf("Bem-vindo ao universo! Para começar, diga-me seu nome ou descreva o que você gostaria de ser."))
+        }
+        checkAppVersion()
+    }
+
+    fun checkAppVersion() {
+        _versionStatus.value = VersionStatus.CHECKING
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("${getCurrentBaseUrl()}/status")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
+                    val serverInfo = JSONObject(responseBody)
+                    val minVersion = serverInfo.getString("minimum_client_version")
+
+                    if (BuildConfig.VERSION_NAME.toDouble() >= minVersion.toDouble()) {
+                        _versionStatus.value = VersionStatus.UP_TO_DATE
+                    } else {
+                        _versionStatus.value = VersionStatus.OUTDATED
+                    }
+                } else {
+                    _versionStatus.value = VersionStatus.ERROR
+                }
+            } catch (e: Exception) {
+                println("Erro de conexão ao verificar versão: ${e.message}")
+                _versionStatus.value = VersionStatus.ERROR
+            }
         }
     }
 
     fun toggleEmulatorMode() {
         _isEmulatorMode.value = !_isEmulatorMode.value
+        checkAppVersion()
+    }
+
+    fun setCustomIpAddress(address: String) {
+        _customIpAddress.value = address
+        checkAppVersion()
     }
 
     private fun getCurrentBaseUrl(): String {
+        val customIp = _customIpAddress.value.trim()
+        if (customIp.isNotEmpty()) {
+            return if (customIp.startsWith("http")) customIp else "http://$customIp"
+        }
         val ip = if (_isEmulatorMode.value) emulatorIp else physicalDeviceIp
         return "http://$ip:5000"
     }
 
-    fun fetchGameState() {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val url = URL("${getCurrentBaseUrl()}/get_game_state")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 10000
-                connection.readTimeout = 10000
-
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                    val responseBody = BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
-                    val parsedState = parseGameState(responseBody)
-                    _gameState.update { it.copy(
-                        base = parsedState.base,
-                        vitals = parsedState.vitals,
-                        possessions = parsedState.possessions
-                    ) }
-                } else {
-                    println("Erro do servidor ao buscar estado: ${connection.responseCode}")
-                }
-            } catch (e: Exception) {
-                println("Erro de conexão ao buscar estado: ${e.message}")
-            }
-        }
-    }
-
     fun sendPlayerAction(action: String) {
-        // Adiciona a ação do jogador e a mensagem de "pensando" à narrativa
         _gameState.update { currentState ->
             val updatedLines = currentState.narrativeLines + "\n\nSua ação: $action" + "Mestre de Jogo pensando..."
             currentState.copy(isLoading = true, narrativeLines = updatedLines)
@@ -108,7 +134,6 @@ class GameViewModel : ViewModel() {
                 }
 
                 _gameState.update { currentState ->
-                    // Remove a mensagem "pensando..." e adiciona a resposta
                     val currentLines = currentState.narrativeLines.dropLast(1)
                     currentState.copy(narrativeLines = currentLines + newLines)
                 }
@@ -125,36 +150,6 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    private fun parseGameState(jsonString: String): GameState {
-        val json = JSONObject(jsonString)
-        val baseJson = json.optJSONObject("base") ?: JSONObject()
-        val playerBase = PlayerBase(
-            nome = baseJson.optString("nome", "N/A"),
-            local_nome = baseJson.optString("local_nome", "N/A")
-        )
-
-        val vitalsJson = json.optJSONObject("vitals") ?: JSONObject()
-        val playerVitals = PlayerVitals(
-            fome = vitalsJson.optString("fome", "-"),
-            sede = vitalsJson.optString("sede", "-"),
-            cansaco = vitalsJson.optString("cansaco", "-"),
-            humor = vitalsJson.optString("humor", "-")
-        )
-
-        val possessionsJsonArray = json.optJSONArray("posses")
-        val possessionsList = mutableListOf<PlayerPossession>()
-        if (possessionsJsonArray != null) {
-            for (i in 0 until possessionsJsonArray.length()) {
-                val pJson = possessionsJsonArray.getJSONObject(i)
-                possessionsList.add(
-                    PlayerPossession(
-                        itemName = pJson.optString("item_nome", "Item desconhecido"),
-                        profile = JSONObject(pJson.optString("perfil_json", "{}"))
-                    )
-                )
-            }
-        }
-
-        return GameState(base = playerBase, vitals = playerVitals, possessions = possessionsList)
-    }
+    fun fetchGameState() { /* ... */ }
+    private fun parseGameState(jsonString: String): GameState { /* ... */ return GameState() }
 }

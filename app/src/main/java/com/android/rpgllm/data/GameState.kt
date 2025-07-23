@@ -1,5 +1,5 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/GameState.kt
-package com.android.rpgllm.ui.theme
+// app/src/main/java/com/android/rpgllm/data/GameState.kt
+package com.android.rpgllm.data // PACOTE ATUALIZADO
 
 import org.json.JSONObject
 

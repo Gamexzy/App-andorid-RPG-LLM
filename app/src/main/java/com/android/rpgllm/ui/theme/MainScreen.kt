@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.rpgllm.data.GameViewModel // IMPORT ATUALIZADO
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -16,6 +17,7 @@ fun MainScreen(gameViewModel: GameViewModel = viewModel()) {
     val scope = rememberCoroutineScope()
     val gameState by gameViewModel.gameState.collectAsState()
     val isEmulatorMode by gameViewModel.isEmulatorMode.collectAsState()
+    val customIpAddress by gameViewModel.customIpAddress.collectAsState()
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {
@@ -29,7 +31,9 @@ fun MainScreen(gameViewModel: GameViewModel = viewModel()) {
             DrawerContent(
                 gameState = gameState,
                 isEmulatorMode = isEmulatorMode,
-                onToggleEmulatorMode = { gameViewModel.toggleEmulatorMode() }
+                onToggleEmulatorMode = { gameViewModel.toggleEmulatorMode() },
+                customIpAddress = customIpAddress,
+                onCustomIpChange = { newIp -> gameViewModel.setCustomIpAddress(newIp) }
             )
         },
     ) {

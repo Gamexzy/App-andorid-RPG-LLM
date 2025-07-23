@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.rpgllm.data.GameState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
