@@ -45,7 +45,7 @@ class GameViewModel : ViewModel() {
 
     private var currentSessionName: String? = null
     private val emulatorIp = "10.0.2.2"
-    private val physicalDeviceIp = "192.168.0.104" // Lembre-se de ajustar se necessário
+    private val physicalDeviceIp = "192.168.0.104"
 
     init {
         checkAppVersion()
@@ -56,9 +56,8 @@ class GameViewModel : ViewModel() {
     fun loadSession(sessionName: String) {
         currentSessionName = sessionName
         _gameState.update {
-            GameState(narrativeLines = listOf("Carregando saga '$sessionName'..."))
+            GameState(narrativeLines = listOf("A carregar saga '$sessionName'..."))
         }
-        // A narrativa inicial será buscada pelo fetchGameState
         fetchGameState(isInitialLoad = true)
     }
 
@@ -72,11 +71,10 @@ class GameViewModel : ViewModel() {
                     val sessions = parseSessionList(response)
                     _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
                 } else {
-                    // Lidar com erro, talvez com uma mensagem na UI
-                    _sessionListState.update { it.copy(isLoading = false, error = "Falha ao buscar sessões.") }
+                    _sessionListState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
-                _sessionListState.update { it.copy(isLoading = false, error = "Erro de conexão: ${e.message}") }
+                _sessionListState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -96,10 +94,7 @@ class GameViewModel : ViewModel() {
                     val newSessionName = jsonResponse.getString("session_name")
                     val initialNarrative = jsonResponse.getString("initial_narrative")
 
-                    // Prepara o estado do jogo com a narrativa inicial
                     _gameState.value = GameState(narrativeLines = listOf(initialNarrative))
-
-                    // Navega para a tela do jogo
                     onSessionCreated(newSessionName)
                 } else {
                     _creationState.update { it.copy(isLoading = false, errorMessage = "Falha ao criar sessão. O servidor respondeu com um erro.") }
@@ -112,7 +107,6 @@ class GameViewModel : ViewModel() {
         }
     }
 
-
     // --- LÓGICA DE REDE ---
 
     fun checkAppVersion() {
@@ -124,7 +118,6 @@ class GameViewModel : ViewModel() {
                 if (response != null) {
                     val serverInfo = JSONObject(response)
                     val minVersion = serverInfo.getString("minimum_client_version")
-
                     if (BuildConfig.VERSION_NAME.toDouble() >= minVersion.toDouble()) {
                         _versionStatus.value = VersionStatus.UP_TO_DATE
                     } else {
@@ -134,7 +127,6 @@ class GameViewModel : ViewModel() {
                     _versionStatus.value = VersionStatus.ERROR
                 }
             } catch (e: Exception) {
-                println("Erro de conexão ao verificar versão: ${e.message}")
                 _versionStatus.value = VersionStatus.ERROR
             }
         }
@@ -142,12 +134,12 @@ class GameViewModel : ViewModel() {
 
     fun toggleEmulatorMode() {
         _isEmulatorMode.value = !_isEmulatorMode.value
-        checkAppVersion() // Re-verificar a conexão ao mudar o modo
+        checkAppVersion()
     }
 
     fun setCustomIpAddress(address: String) {
         _customIpAddress.value = address
-        checkAppVersion() // Re-verificar a conexão ao mudar o IP
+        checkAppVersion()
     }
 
     private fun getCurrentBaseUrl(): String {
@@ -163,28 +155,27 @@ class GameViewModel : ViewModel() {
         val session = currentSessionName ?: return
 
         _gameState.update { currentState ->
-            val updatedLines = currentState.narrativeLines + "\n\n> $action" + "\n\n*O Mestre do Jogo reflete sobre seus atos...*"
+            val updatedLines = currentState.narrativeLines + "\n\nSua ação: $action" + "Mestre de Jogo a pensar..."
             currentState.copy(isLoading = true, narrativeLines = updatedLines)
         }
 
         viewModelScope.launch {
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/$session/execute_turn")
-                val payload = JSONObject().apply { put("player_action", action) }.toString()
-                val response = makeRequest(url, "POST", payload)
+                val payload = JSONObject().apply { put("player_action", action) }
+                val response = makeRequest(url, "POST", payload.toString())
 
                 val newLines = if (response != null) {
-                    val narrative = JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada na resposta.")
+                    val narrative = JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
                     listOf("\n\n$narrative")
                 } else {
-                    listOf("\n\nErro do Servidor: Não houve resposta.")
+                    listOf("\n\nErro do Servidor: Nenhuma resposta recebida.")
                 }
 
                 _gameState.update { currentState ->
-                    val currentLines = currentState.narrativeLines.dropLast(1) // Remove a mensagem "pensando"
+                    val currentLines = currentState.narrativeLines.dropLast(1)
                     currentState.copy(narrativeLines = currentLines + newLines)
                 }
-
             } catch (e: Exception) {
                 _gameState.update { currentState ->
                     val currentLines = currentState.narrativeLines.dropLast(1)
@@ -193,7 +184,6 @@ class GameViewModel : ViewModel() {
                 }
             } finally {
                 _gameState.update { it.copy(isLoading = false) }
-                fetchGameState() // Atualiza o estado do personagem após a ação
             }
         }
     }
@@ -204,11 +194,12 @@ class GameViewModel : ViewModel() {
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/$session/state")
                 val response = makeRequest(url, "GET")
+
                 if (response != null) {
                     val parsedState = parseGameState(response)
                     _gameState.update { currentState ->
                         // Se for o carregamento inicial, substitui a narrativa. Senão, mantém a existente.
-                        val narrative = if (isInitialLoad) parsedState.narrativeLines else currentState.narrativeLines
+                        val narrative = if(isInitialLoad) listOf("Carregamento concluído. Continue a sua aventura!") else currentState.narrativeLines
                         parsedState.copy(narrativeLines = narrative)
                     }
                 } else {
@@ -237,11 +228,39 @@ class GameViewModel : ViewModel() {
         return list
     }
 
+    private suspend fun makeRequest(url: URL, method: String, body: String? = null): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = method
+                connection.setRequestProperty("Content-Type", "application/json; utf-8")
+                connection.setRequestProperty("Accept", "application/json")
+                connection.connectTimeout = 15000
+                connection.readTimeout = 60000
+
+                if (method == "POST" && body != null) {
+                    connection.doOutput = true
+                    OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+                        writer.write(body)
+                        writer.flush()
+                    }
+                }
+
+                if (connection.responseCode in 200..299) {
+                    BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
+                } else {
+                    println("Erro na requisição para $url: ${connection.responseCode} - ${connection.responseMessage}")
+                    null
+                }
+            } catch (e: Exception) {
+                println("Exceção na requisição para $url: ${e.message}")
+                null
+            }
+        }
+    }
+
     private fun parseGameState(jsonString: String): GameState {
         val json = JSONObject(jsonString)
-
-        val narrative = json.optString("initial_narrative", "")
-
         val baseJson = json.optJSONObject("base") ?: JSONObject()
         val playerBase = PlayerBase(
             nome = baseJson.optString("nome", "N/A"),
@@ -270,45 +289,6 @@ class GameViewModel : ViewModel() {
             }
         }
 
-        return GameState(
-            narrativeLines = if(narrative.isNotEmpty()) listOf(narrative) else emptyList(),
-            base = playerBase,
-            vitals = playerVitals,
-            possessions = possessionsList
-        )
-    }
-
-    private suspend fun makeRequest(url: URL, method: String, body: String? = null): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = method
-                connection.setRequestProperty("Content-Type", "application/json; utf-8")
-                connection.setRequestProperty("Accept", "application/json")
-                connection.connectTimeout = 15000 // 15 segundos
-                connection.readTimeout = 60000    // 60 segundos
-
-                if ((method == "POST" || method == "PUT") && body != null) {
-                    connection.doOutput = true
-                    OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
-                        writer.write(body)
-                        writer.flush()
-                    }
-                }
-
-                if (connection.responseCode in 200..299) {
-                    BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
-                } else {
-                    val errorStream = connection.errorStream?.let {
-                        BufferedReader(InputStreamReader(it, "UTF-8")).use { r -> r.readText() }
-                    } ?: "Nenhuma informação de erro disponível."
-                    println("Erro na requisição para $url: ${connection.responseCode}. Detalhes: $errorStream")
-                    null
-                }
-            } catch (e: Exception) {
-                println("Exceção na requisição para $url: ${e.message}")
-                null
-            }
-        }
+        return GameState(base = playerBase, vitals = playerVitals, possessions = possessionsList)
     }
 }

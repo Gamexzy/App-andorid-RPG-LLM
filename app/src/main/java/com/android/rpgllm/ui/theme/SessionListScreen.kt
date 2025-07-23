@@ -30,7 +30,7 @@ fun SessionListScreen(
 ) {
     val uiState by gameViewModel.sessionListState.collectAsState()
 
-    // Busca as sessões quando a tela é exibida pela primeira vez
+    // Busca as sessões quando o ecrã é exibido pela primeira vez
     LaunchedEffect(Unit) {
         gameViewModel.fetchSessions()
     }
@@ -38,7 +38,7 @@ fun SessionListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Minhas Sagas") },
+                title = { Text("As Minhas Sagas") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF121212),
                     titleContentColor = Color.White
@@ -65,9 +65,10 @@ fun SessionListScreen(
                 uiState.isLoading -> {
                     CircularProgressIndicator(color = Color(0xFF00C853))
                 }
-                uiState.error != null -> {
+                // --- CORREÇÃO APLICADA AQUI ---
+                uiState.errorMessage != null -> {
                     Text(
-                        text = "Erro ao carregar sagas:\n${uiState.error}",
+                        text = "Erro ao carregar sagas:\n${uiState.errorMessage}",
                         color = Color.Red,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(16.dp)
@@ -86,13 +87,7 @@ fun SessionListScreen(
                         contentPadding = PaddingValues(16.dp)
                     ) {
                         items(uiState.sessions) { session ->
-                            SessionCard(
-                                session = session,
-                                onClick = {
-                                    gameViewModel.loadSession(session.session_name)
-                                    onNavigateToGame(session.session_name)
-                                }
-                            )
+                            SessionCard(session = session, onClick = { onNavigateToGame(session.session_name) })
                         }
                     }
                 }
