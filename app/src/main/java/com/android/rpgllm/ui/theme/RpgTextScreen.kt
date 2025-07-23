@@ -64,14 +64,18 @@ fun RpgTextScreen() {
         playerInput = "" // Limpa o input imediatamente
         isLoading = true // Ativa o estado de carregamento
 
-        // Adiciona a ação do jogador à narrativa
-        narrativeLines.add("\n\n\u001b[1;33mSua ação:\u001b[0m $currentInput")
+        // Adiciona a ação do jogador à narrativa (sem códigos de cor)
+        narrativeLines.add("\n\nSua ação: $currentInput")
         narrativeLines.add("Mestre de Jogo pensando...") // Indicador de carregamento na narrativa
 
         coroutineScope.launch(Dispatchers.IO) {
             try {
-                // URL do backend Python. 10.0.2.2 é o IP do host para o emulador Android
-                val url = URL("http://10.0.2.2:5000/execute_turn")
+                // --- IMPORTANTE: CONFIGURAÇÃO DE REDE ---
+                // 1. Se estiver usando o Emulador Android, o IP 10.0.2.2 é o correto.
+                // 2. Se estiver usando um CELULAR FÍSICO, substitua "10.0.2.2" pelo
+                //    endereço de IP do seu COMPUTADOR na sua rede Wi-Fi (ex: "192.168.1.5").
+                // 3. Certifique-se que o celular e o computador estão na MESMA rede Wi-Fi.
+                val url = URL("http://192.168.0.104:5000/execute_turn")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json; utf-8")
@@ -94,7 +98,6 @@ fun RpgTextScreen() {
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { reader ->
                         val responseBody = reader.readText()
-                        // **NOVO: Interpreta a resposta JSON do servidor**
                         val responseJson = JSONObject(responseBody)
                         val narrative = responseJson.optString("narrative", "Erro: 'narrative' não encontrada na resposta.")
 
@@ -113,7 +116,8 @@ fun RpgTextScreen() {
                         if (narrativeLines.lastOrNull() == "Mestre de Jogo pensando...") {
                             narrativeLines.removeAt(narrativeLines.lastIndex)
                         }
-                        narrativeLines.add("\n\n\u001b[1;31mErro do Servidor ($responseCode):\u001b[0m $errorStream")
+                        // Adiciona mensagem de erro (sem códigos de cor)
+                        narrativeLines.add("\n\nErro do Servidor ($responseCode): $errorStream")
                     }
                 }
             } catch (e: Exception) {
@@ -121,7 +125,8 @@ fun RpgTextScreen() {
                     if (narrativeLines.lastOrNull() == "Mestre de Jogo pensando...") {
                         narrativeLines.removeAt(narrativeLines.lastIndex)
                     }
-                    narrativeLines.add("\n\n\u001b[1;31mErro de Conexão:\u001b[0m Verifique se o servidor Python está rodando e se o dispositivo tem acesso à rede. (${e.message})")
+                    // Adiciona mensagem de erro (sem códigos de cor)
+                    narrativeLines.add("\n\nErro de Conexão: Verifique se o servidor Python está rodando e se o dispositivo tem acesso à rede. (${e.message})")
                 }
             } finally {
                 withContext(Dispatchers.Main) {
