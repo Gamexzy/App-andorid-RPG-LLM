@@ -25,26 +25,21 @@ fun AppNavigation(gameViewModel: GameViewModel) {
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.SESSION_LIST // A primeira tela a ser mostrada
+        startDestination = AppRoutes.SESSION_LIST
     ) {
-        // Define a tela da lista de sessões
         composable(AppRoutes.SESSION_LIST) {
             SessionListScreen(
-                onNavigateToCreation = {
-                    navController.navigate(AppRoutes.CHARACTER_CREATION)
-                },
-                onNavigateToGame = { sessionName ->
-                    navController.navigate(AppRoutes.gameScreen(sessionName))
-                }
+                gameViewModel = gameViewModel, // Passa o ViewModel
+                onNavigateToCreation = { navController.navigate(AppRoutes.CHARACTER_CREATION) },
+                onNavigateToGame = { sessionName -> navController.navigate(AppRoutes.gameScreen(sessionName)) }
             )
         }
 
-        // Define a tela de criação de personagem
         composable(AppRoutes.CHARACTER_CREATION) {
             CharacterCreationScreen(
+                gameViewModel = gameViewModel, // Passa o ViewModel
                 onNavigateBack = { navController.popBackStack() },
                 onSessionCreated = { sessionName ->
-                    // Navega para o jogo, limpando a pilha para que o usuário não volte para a criação
                     navController.navigate(AppRoutes.gameScreen(sessionName)) {
                         popUpTo(AppRoutes.SESSION_LIST)
                     }
@@ -52,10 +47,8 @@ fun AppNavigation(gameViewModel: GameViewModel) {
             )
         }
 
-        // Define a tela principal do jogo
         composable(AppRoutes.GAME_SCREEN) { backStackEntry ->
             val sessionName = backStackEntry.arguments?.getString("sessionName") ?: "error_session"
-            // Passamos o nome da sessão para a MainScreen
             MainScreen(
                 gameViewModel = gameViewModel,
                 sessionName = sessionName
