@@ -8,22 +8,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.android.rpgllm.ui.theme.RPGLLMTheme // Importa o seu tema
-import com.android.rpgllm.ui.theme.RpgTextScreen // Importa RpgTextScreen do pacote ui.theme
+import com.android.rpgllm.ui.theme.RPGLLMTheme
+import com.android.rpgllm.ui.theme.MainScreen // Importa a nova tela principal
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Aplica o tema do seu aplicativo (definido em ui.theme/Theme.kt)
             RPGLLMTheme {
-                // Uma superfície de contêiner usando a cor 'background' do tema
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Chama a função Composable que constrói a tela principal do RPG
-                    RpgTextScreen()
+                    // Chama a nova tela que contém a aba lateral e a tela do RPG
+                    MainScreen()
                 }
             }
         }
