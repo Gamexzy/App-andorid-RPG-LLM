@@ -7,17 +7,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.android.rpgllm.data.GameViewModel // IMPORT ATUALIZADO
+import com.android.rpgllm.data.GameViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(gameViewModel: GameViewModel = viewModel()) {
+fun MainScreen(
+    gameViewModel: GameViewModel = viewModel(),
+    sessionName: String // Parâmetro adicionado
+) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val gameState by gameViewModel.gameState.collectAsState()
     val isEmulatorMode by gameViewModel.isEmulatorMode.collectAsState()
     val customIpAddress by gameViewModel.customIpAddress.collectAsState()
+
+    // Efeito que é executado apenas uma vez quando a tela é criada
+    LaunchedEffect(key1 = sessionName) {
+        gameViewModel.loadSession(sessionName)
+    }
 
     LaunchedEffect(drawerState.isOpen) {
         if (drawerState.isOpen) {

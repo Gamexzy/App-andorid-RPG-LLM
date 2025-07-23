@@ -1,5 +1,5 @@
 // app/src/main/java/com/android/rpgllm/data/GameViewModel.kt
-package com.android.rpgllm.data // PACOTE ATUALIZADO
+package com.android.rpgllm.data
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,7 +17,7 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-// Enum para controlar o status da verificação de versão
+// Enum movido para fora da classe para ser acessível por outras classes, como a MainActivity
 enum class VersionStatus {
     CHECKING,
     UP_TO_DATE,
@@ -39,14 +39,21 @@ class GameViewModel : ViewModel() {
     private val _versionStatus = MutableStateFlow(VersionStatus.CHECKING)
     val versionStatus: StateFlow<VersionStatus> = _versionStatus.asStateFlow()
 
+    private var currentSessionName: String? = null
+
     private val emulatorIp = "10.0.2.2"
     private val physicalDeviceIp = "192.168.0.104"
 
     init {
-        _gameState.update {
-            it.copy(narrativeLines = listOf("Bem-vindo ao universo! Para começar, diga-me seu nome ou descreva o que você gostaria de ser."))
-        }
         checkAppVersion()
+    }
+
+    fun loadSession(sessionName: String) {
+        currentSessionName = sessionName
+        _gameState.update {
+            GameState(narrativeLines = listOf("A carregar saga '$sessionName'..."))
+        }
+        fetchGameState()
     }
 
     fun checkAppVersion() {
@@ -98,15 +105,43 @@ class GameViewModel : ViewModel() {
         return "http://$ip:5000"
     }
 
+    fun fetchGameState() {
+        val session = currentSessionName ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = URL("${getCurrentBaseUrl()}/sessions/$session/state")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseBody = BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
+                    val parsedState = parseGameState(responseBody)
+                    _gameState.update { currentState ->
+                        // Mantém a narrativa atual ao atualizar o estado
+                        parsedState.copy(narrativeLines = currentState.narrativeLines)
+                    }
+                } else {
+                    _gameState.update { it.copy(narrativeLines = it.narrativeLines + "Erro ao carregar estado do jogo.") }
+                }
+            } catch (e: Exception) {
+                _gameState.update { it.copy(narrativeLines = it.narrativeLines + "Erro de conexão ao carregar estado: ${e.message}") }
+            }
+        }
+    }
+
     fun sendPlayerAction(action: String) {
+        val session = currentSessionName ?: return
+
         _gameState.update { currentState ->
-            val updatedLines = currentState.narrativeLines + "\n\nSua ação: $action" + "Mestre de Jogo pensando..."
+            val updatedLines = currentState.narrativeLines + "\n\nSua ação: $action" + "Mestre de Jogo a pensar..."
             currentState.copy(isLoading = true, narrativeLines = updatedLines)
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val url = URL("${getCurrentBaseUrl()}/execute_turn")
+                val url = URL("${getCurrentBaseUrl()}/sessions/$session/execute_turn")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 connection.setRequestProperty("Content-Type", "application/json; utf-8")
@@ -150,6 +185,36 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    fun fetchGameState() { /* ... */ }
-    private fun parseGameState(jsonString: String): GameState { /* ... */ return GameState() }
+    private fun parseGameState(jsonString: String): GameState {
+        val json = JSONObject(jsonString)
+        val baseJson = json.optJSONObject("base") ?: JSONObject()
+        val playerBase = PlayerBase(
+            nome = baseJson.optString("nome", "N/A"),
+            local_nome = baseJson.optString("local_nome", "N/A")
+        )
+
+        val vitalsJson = json.optJSONObject("vitals") ?: JSONObject()
+        val playerVitals = PlayerVitals(
+            fome = vitalsJson.optString("fome", "-"),
+            sede = vitalsJson.optString("sede", "-"),
+            cansaco = vitalsJson.optString("cansaco", "-"),
+            humor = vitalsJson.optString("humor", "-")
+        )
+
+        val possessionsJsonArray = json.optJSONArray("posses")
+        val possessionsList = mutableListOf<PlayerPossession>()
+        if (possessionsJsonArray != null) {
+            for (i in 0 until possessionsJsonArray.length()) {
+                val pJson = possessionsJsonArray.getJSONObject(i)
+                possessionsList.add(
+                    PlayerPossession(
+                        itemName = pJson.optString("item_nome", "Item desconhecido"),
+                        profile = JSONObject(pJson.optString("perfil_json", "{}"))
+                    )
+                )
+            }
+        }
+
+        return GameState(base = playerBase, vitals = playerVitals, possessions = possessionsList)
+    }
 }
