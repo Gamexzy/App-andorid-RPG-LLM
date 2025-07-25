@@ -100,10 +100,12 @@ fun SessionCard(session: SessionInfo, onClick: () -> Unit) {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
+            // --- LINHA ATUALIZADA AQUI ---
             Text(
-                text = "Sessão: ${session.session_name}",
+                text = session.world_concept, // Agora exibe o conceito do mundo
                 color = Color.Gray,
-                fontSize = 14.sp
+                fontSize = 14.sp,
+                maxLines = 2 // Limita a 2 linhas para não ocupar muito espaço
             )
         }
     }

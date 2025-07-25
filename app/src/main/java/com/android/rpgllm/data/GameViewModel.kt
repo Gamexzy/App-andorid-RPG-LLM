@@ -19,7 +19,6 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-// Versão 1.3.0: Adicionado estado NONE para a verificação de versão
 enum class VersionStatus { NONE, CHECKING, UP_TO_DATE, OUTDATED, ERROR }
 
 class GameViewModel : ViewModel() {
@@ -34,7 +33,7 @@ class GameViewModel : ViewModel() {
     private val _creationState = MutableStateFlow(CreationUiState())
     val creationState: StateFlow<CreationUiState> = _creationState.asStateFlow()
 
-    private val _versionStatus = MutableStateFlow(VersionStatus.NONE) // Inicia como NONE
+    private val _versionStatus = MutableStateFlow(VersionStatus.NONE)
     val versionStatus: StateFlow<VersionStatus> = _versionStatus.asStateFlow()
 
     // --- Configurações de Conexão ---
@@ -46,28 +45,20 @@ class GameViewModel : ViewModel() {
 
     private var currentSessionName: String? = null
     private val emulatorIp = "10.0.2.2"
-    // NOTA: Lembre-se de usar o IP da sua máquina na rede local
-    private val physicalDeviceIp = "192.168.0.102"
-
-    // A verificação de versão não é mais chamada no init
+    private val physicalDeviceIp = "192.168.0.104" // IP ATUALIZADO
 
     // --- LÓGICA DE NAVEGAÇÃO E SESSÃO ---
 
     fun loadSession(sessionName: String) {
-        if (currentSessionName == sessionName && _gameState.value.narrativeLines.isNotEmpty()) {
-            return
-        }
         currentSessionName = sessionName
-        _gameState.update {
-            GameState(narrativeLines = listOf("A carregar saga '$sessionName'..."))
-        }
+        // Limpa o estado anterior para mostrar a mensagem de carregamento
+        _gameState.update { GameState(narrativeLines = listOf("A carregar saga '$sessionName'...")) }
         fetchGameState(isInitialLoad = true)
     }
 
     fun fetchSessions() {
         _sessionListState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            // Primeiro, verifica a conexão
             val canProceed = checkAppVersion()
             if (canProceed) {
                 try {
@@ -102,7 +93,7 @@ class GameViewModel : ViewModel() {
                     val jsonResponse = JSONObject(response)
                     val newSessionName = jsonResponse.getString("session_name")
                     val initialNarrative = jsonResponse.getString("initial_narrative")
-                    currentSessionName = newSessionName
+
                     _gameState.value = GameState(narrativeLines = listOf(initialNarrative))
                     onSessionCreated(newSessionName)
                 } else {
@@ -137,12 +128,11 @@ class GameViewModel : ViewModel() {
                 _versionStatus.value = VersionStatus.ERROR
                 false
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             _versionStatus.value = VersionStatus.ERROR
             false
         }
     }
-
 
     fun toggleEmulatorMode() {
         _isEmulatorMode.value = !_isEmulatorMode.value
@@ -154,38 +144,48 @@ class GameViewModel : ViewModel() {
 
     private fun getCurrentBaseUrl(): String {
         val customIp = _customIpAddress.value.trim()
-        if (customIp.isNotEmpty()) {
-            return if (customIp.startsWith("http")) customIp else "http://$customIp"
+        val finalIp = when {
+            customIp.isNotEmpty() -> customIp.removePrefix("http://").removePrefix("https://").split(":").first()
+            _isEmulatorMode.value -> emulatorIp
+            else -> physicalDeviceIp
         }
-        val ip = if (_isEmulatorMode.value) emulatorIp else physicalDeviceIp
-        return "http://$ip:5000"
+        return "http://$finalIp:5000"
     }
 
     fun sendPlayerAction(action: String) {
         val session = currentSessionName ?: return
+
+        // Adiciona a ação do jogador à UI imediatamente
         _gameState.update { currentState ->
-            val updatedLines = currentState.narrativeLines + "\n\n> $action" + " "
+            val updatedLines = currentState.narrativeLines + "\n\n> $action"
             currentState.copy(isLoading = true, narrativeLines = updatedLines)
         }
+
         viewModelScope.launch {
-            var newNarrative: String? = null
-            try {
+            // --- CORREÇÃO APLICADA AQUI ---
+            // A variável 'newLines' é agora uma 'val' e recebe o resultado do bloco 'try-catch',
+            // garantindo que ela seja sempre inicializada.
+            val newLines: List<String> = try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/$session/execute_turn")
                 val payload = JSONObject().apply { put("player_action", action) }
                 val response = makeRequest(url, "POST", payload.toString())
-                newNarrative = if (response != null) {
-                    JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
+
+                if (response != null) {
+                    val narrative = JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
+                    listOf("\n\n$narrative")
                 } else {
-                    "Erro do Servidor: Nenhuma resposta recebida."
+                    listOf("\n\nErro do Servidor: Nenhuma resposta recebida.")
                 }
             } catch (e: Exception) {
-                newNarrative = "Erro de Conexão: Verifique o servidor e o IP. (${e.message})"
-            } finally {
-                _gameState.update { currentState ->
-                    val currentLines = currentState.narrativeLines.dropLast(1)
-                    val finalLines = currentLines + "\n\n$newNarrative"
-                    currentState.copy(isLoading = false, narrativeLines = finalLines)
-                }
+                listOf("\n\nErro de Conexão: Verifique o servidor e o IP. (${e.message})")
+            }
+
+            // Atualiza o estado da UI com a resposta do servidor
+            _gameState.update { currentState ->
+                currentState.copy(
+                    isLoading = false,
+                    narrativeLines = currentState.narrativeLines + newLines
+                )
             }
         }
     }
@@ -200,17 +200,26 @@ class GameViewModel : ViewModel() {
                 if (response != null) {
                     val parsedState = parseGameState(response)
                     _gameState.update { currentState ->
-                        val narrative = if(isInitialLoad) listOf("Carregamento concluído. Continue a sua aventura!") else currentState.narrativeLines
+                        val narrative = if(isInitialLoad) {
+                            // Mantém a narrativa de criação se for o primeiro carregamento
+                            if (currentState.narrativeLines.size <= 1) {
+                                currentState.narrativeLines
+                            } else {
+                                listOf("Carregamento concluído. Continue a sua aventura!")
+                            }
+                        } else {
+                            currentState.narrativeLines
+                        }
                         parsedState.copy(narrativeLines = narrative)
                     }
-                } else {
-                    _gameState.update { it.copy(narrativeLines = it.narrativeLines + "Erro ao carregar estado do jogo.") }
                 }
             } catch (e: Exception) {
-                _gameState.update { it.copy(narrativeLines = it.narrativeLines + "Erro de conexão ao carregar estado: ${e.message}") }
+                println("Erro de conexão ao carregar estado: ${e.message}")
             }
         }
     }
+
+    // --- FUNÇÕES AUXILIARES ---
 
     private fun parseSessionList(jsonString: String): List<SessionInfo> {
         val list = mutableListOf<SessionInfo>()
@@ -220,7 +229,8 @@ class GameViewModel : ViewModel() {
             list.add(
                 SessionInfo(
                     session_name = jsonObject.getString("session_name"),
-                    player_name = jsonObject.getString("player_name")
+                    player_name = jsonObject.getString("player_name"),
+                    world_concept = jsonObject.getString("world_concept")
                 )
             )
         }
@@ -229,13 +239,15 @@ class GameViewModel : ViewModel() {
 
     private suspend fun makeRequest(url: URL, method: String, body: String? = null): String? {
         return withContext(Dispatchers.IO) {
+            var connection: HttpURLConnection? = null
             try {
-                val connection = url.openConnection() as HttpURLConnection
+                connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = method
                 connection.setRequestProperty("Content-Type", "application/json; utf-8")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.connectTimeout = 15000
-                connection.readTimeout = 60000
+                connection.readTimeout = 120000
+
                 if (method == "POST" && body != null) {
                     connection.doOutput = true
                     OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
@@ -243,15 +255,22 @@ class GameViewModel : ViewModel() {
                         writer.flush()
                     }
                 }
-                if (connection.responseCode in 200..299) {
+
+                val responseCode = connection.responseCode
+                if (responseCode in 200..299) {
                     BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
                 } else {
-                    println("Erro na requisição para $url: ${connection.responseCode} - ${connection.responseMessage}")
+                    val errorStream = connection.errorStream?.let {
+                        BufferedReader(InputStreamReader(it, "UTF-8")).use { reader -> reader.readText() }
+                    }
+                    println("Erro na requisição para $url: $responseCode - ${connection.responseMessage} - $errorStream")
                     null
                 }
             } catch (e: Exception) {
                 println("Exceção na requisição para $url: ${e.message}")
                 null
+            } finally {
+                connection?.disconnect()
             }
         }
     }

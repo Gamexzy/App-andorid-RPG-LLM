@@ -6,7 +6,8 @@ import org.json.JSONObject
 // Representa a informação de uma sessão na lista
 data class SessionInfo(
     val session_name: String,
-    val player_name: String
+    val player_name: String,
+    val world_concept: String // NOVO CAMPO
 )
 
 // Representa o estado da UI para a lista de sessões
