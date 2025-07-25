@@ -62,7 +62,7 @@ class GameViewModel : ViewModel() {
     }
 
     fun fetchSessions() {
-        _sessionListState.update { it.copy(isLoading = true) }
+        _sessionListState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions")
@@ -71,19 +71,21 @@ class GameViewModel : ViewModel() {
                     val sessions = parseSessionList(response)
                     _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
                 } else {
-                    _sessionListState.update { it.copy(isLoading = false) }
+                    _sessionListState.update { it.copy(isLoading = false, errorMessage = "Servidor não respondeu.") }
                 }
             } catch (e: Exception) {
-                _sessionListState.update { it.copy(isLoading = false) }
+                _sessionListState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
     }
 
+    // --- FUNÇÃO ATUALIZADA ---
     fun createNewSession(characterName: String, worldConcept: String, onSessionCreated: (String) -> Unit) {
         _creationState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/create")
+                // Payload simplificado: o servidor agora gera o nome da sessão.
                 val payload = JSONObject().apply {
                     put("character_name", characterName)
                     put("world_concept", worldConcept)
@@ -91,6 +93,13 @@ class GameViewModel : ViewModel() {
                 val response = makeRequest(url, "POST", payload.toString())
                 if (response != null) {
                     val jsonResponse = JSONObject(response)
+
+                    // Verifica se há um erro na resposta do servidor antes de continuar
+                    if (jsonResponse.has("error")) {
+                        _creationState.update { it.copy(isLoading = false, errorMessage = jsonResponse.getString("error")) }
+                        return@launch
+                    }
+
                     val newSessionName = jsonResponse.getString("session_name")
                     val initialNarrative = jsonResponse.getString("initial_narrative")
 
@@ -198,7 +207,6 @@ class GameViewModel : ViewModel() {
                 if (response != null) {
                     val parsedState = parseGameState(response)
                     _gameState.update { currentState ->
-                        // Se for o carregamento inicial, substitui a narrativa. Senão, mantém a existente.
                         val narrative = if(isInitialLoad) listOf("Carregamento concluído. Continue a sua aventura!") else currentState.narrativeLines
                         parsedState.copy(narrativeLines = narrative)
                     }
@@ -236,7 +244,7 @@ class GameViewModel : ViewModel() {
                 connection.setRequestProperty("Content-Type", "application/json; utf-8")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.connectTimeout = 15000
-                connection.readTimeout = 60000
+                connection.readTimeout = 120000
 
                 if (method == "POST" && body != null) {
                     connection.doOutput = true
@@ -249,8 +257,10 @@ class GameViewModel : ViewModel() {
                 if (connection.responseCode in 200..299) {
                     BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
                 } else {
-                    println("Erro na requisição para $url: ${connection.responseCode} - ${connection.responseMessage}")
-                    null
+                    val errorStream = connection.errorStream?.let { BufferedReader(InputStreamReader(it, "UTF-8")).use { reader -> reader.readText() } } ?: connection.responseMessage
+                    println("Erro na requisição para $url: ${connection.responseCode} - $errorStream")
+                    // Retorna o corpo do erro para que a UI possa exibi-lo
+                    return@withContext errorStream
                 }
             } catch (e: Exception) {
                 println("Exceção na requisição para $url: ${e.message}")
