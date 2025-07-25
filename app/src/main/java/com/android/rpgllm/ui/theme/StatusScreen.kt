@@ -48,6 +48,8 @@ fun StatusScreen(
             color = Color.Transparent
             showErrorContent = false
         }
+
+        VersionStatus.NONE -> TODO()
     }
 
     Box(

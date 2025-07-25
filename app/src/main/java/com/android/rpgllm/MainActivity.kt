@@ -8,13 +8,10 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.android.rpgllm.data.GameViewModel
-import com.android.rpgllm.data.VersionStatus
-import com.android.rpgllm.navigation.AppNavigation // Importa o novo sistema de navegação
-import com.android.rpgllm.ui.theme.*
+import com.android.rpgllm.navigation.AppNavigation
+import com.android.rpgllm.ui.theme.RPGLLMTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -28,18 +25,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val versionStatus by gameViewModel.versionStatus.collectAsState()
-
-                    if (versionStatus == VersionStatus.UP_TO_DATE) {
-                        // Se a versão estiver OK, inicia o fluxo de navegação
-                        AppNavigation(gameViewModel = gameViewModel)
-                    } else {
-                        // Para todos os outros casos, mostra a tela de status
-                        StatusScreen(
-                            status = versionStatus,
-                            onRetry = { gameViewModel.checkAppVersion() }
-                        )
-                    }
+                    // A verificação de versão foi removida daqui.
+                    // A aplicação agora inicia diretamente na navegação principal.
+                    AppNavigation(gameViewModel = gameViewModel)
                 }
             }
         }

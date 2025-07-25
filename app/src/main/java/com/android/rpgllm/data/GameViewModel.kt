@@ -19,7 +19,8 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-enum class VersionStatus { CHECKING, UP_TO_DATE, OUTDATED, ERROR }
+// Versão 1.3.0: Adicionado estado NONE para a verificação de versão
+enum class VersionStatus { NONE, CHECKING, UP_TO_DATE, OUTDATED, ERROR }
 
 class GameViewModel : ViewModel() {
 
@@ -33,7 +34,7 @@ class GameViewModel : ViewModel() {
     private val _creationState = MutableStateFlow(CreationUiState())
     val creationState: StateFlow<CreationUiState> = _creationState.asStateFlow()
 
-    private val _versionStatus = MutableStateFlow(VersionStatus.CHECKING)
+    private val _versionStatus = MutableStateFlow(VersionStatus.NONE) // Inicia como NONE
     val versionStatus: StateFlow<VersionStatus> = _versionStatus.asStateFlow()
 
     // --- Configurações de Conexão ---
@@ -45,15 +46,17 @@ class GameViewModel : ViewModel() {
 
     private var currentSessionName: String? = null
     private val emulatorIp = "10.0.2.2"
-    private val physicalDeviceIp = "192.168.0.104"
+    // NOTA: Lembre-se de usar o IP da sua máquina na rede local
+    private val physicalDeviceIp = "192.168.0.102"
 
-    init {
-        checkAppVersion()
-    }
+    // A verificação de versão não é mais chamada no init
 
     // --- LÓGICA DE NAVEGAÇÃO E SESSÃO ---
 
     fun loadSession(sessionName: String) {
+        if (currentSessionName == sessionName && _gameState.value.narrativeLines.isNotEmpty()) {
+            return
+        }
         currentSessionName = sessionName
         _gameState.update {
             GameState(narrativeLines = listOf("A carregar saga '$sessionName'..."))
@@ -64,28 +67,32 @@ class GameViewModel : ViewModel() {
     fun fetchSessions() {
         _sessionListState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            try {
-                val url = URL("${getCurrentBaseUrl()}/sessions")
-                val response = makeRequest(url, "GET")
-                if (response != null) {
-                    val sessions = parseSessionList(response)
-                    _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
-                } else {
-                    _sessionListState.update { it.copy(isLoading = false, errorMessage = "Servidor não respondeu.") }
+            // Primeiro, verifica a conexão
+            val canProceed = checkAppVersion()
+            if (canProceed) {
+                try {
+                    val url = URL("${getCurrentBaseUrl()}/sessions")
+                    val response = makeRequest(url, "GET")
+                    if (response != null) {
+                        val sessions = parseSessionList(response)
+                        _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
+                    } else {
+                        _sessionListState.update { it.copy(isLoading = false, errorMessage = "Nenhuma resposta do servidor ao buscar sessões.") }
+                    }
+                } catch (e: Exception) {
+                    _sessionListState.update { it.copy(isLoading = false, errorMessage = e.message) }
                 }
-            } catch (e: Exception) {
-                _sessionListState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            } else {
+                _sessionListState.update { it.copy(isLoading = false, errorMessage = "Falha na conexão com o servidor.") }
             }
         }
     }
 
-    // --- FUNÇÃO ATUALIZADA ---
     fun createNewSession(characterName: String, worldConcept: String, onSessionCreated: (String) -> Unit) {
         _creationState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/create")
-                // Payload simplificado: o servidor agora gera o nome da sessão.
                 val payload = JSONObject().apply {
                     put("character_name", characterName)
                     put("world_concept", worldConcept)
@@ -93,16 +100,9 @@ class GameViewModel : ViewModel() {
                 val response = makeRequest(url, "POST", payload.toString())
                 if (response != null) {
                     val jsonResponse = JSONObject(response)
-
-                    // Verifica se há um erro na resposta do servidor antes de continuar
-                    if (jsonResponse.has("error")) {
-                        _creationState.update { it.copy(isLoading = false, errorMessage = jsonResponse.getString("error")) }
-                        return@launch
-                    }
-
                     val newSessionName = jsonResponse.getString("session_name")
                     val initialNarrative = jsonResponse.getString("initial_narrative")
-
+                    currentSessionName = newSessionName
                     _gameState.value = GameState(narrativeLines = listOf(initialNarrative))
                     onSessionCreated(newSessionName)
                 } else {
@@ -118,37 +118,38 @@ class GameViewModel : ViewModel() {
 
     // --- LÓGICA DE REDE ---
 
-    fun checkAppVersion() {
+    suspend fun checkAppVersion(): Boolean {
         _versionStatus.value = VersionStatus.CHECKING
-        viewModelScope.launch {
-            try {
-                val url = URL("${getCurrentBaseUrl()}/status")
-                val response = makeRequest(url, "GET")
-                if (response != null) {
-                    val serverInfo = JSONObject(response)
-                    val minVersion = serverInfo.getString("minimum_client_version")
-                    if (BuildConfig.VERSION_NAME.toDouble() >= minVersion.toDouble()) {
-                        _versionStatus.value = VersionStatus.UP_TO_DATE
-                    } else {
-                        _versionStatus.value = VersionStatus.OUTDATED
-                    }
+        return try {
+            val url = URL("${getCurrentBaseUrl()}/status")
+            val response = makeRequest(url, "GET")
+            if (response != null) {
+                val serverInfo = JSONObject(response)
+                val minVersion = serverInfo.getString("minimum_client_version")
+                if (BuildConfig.VERSION_NAME.toDouble() >= minVersion.toDouble()) {
+                    _versionStatus.value = VersionStatus.UP_TO_DATE
+                    true
                 } else {
-                    _versionStatus.value = VersionStatus.ERROR
+                    _versionStatus.value = VersionStatus.OUTDATED
+                    false
                 }
-            } catch (e: Exception) {
+            } else {
                 _versionStatus.value = VersionStatus.ERROR
+                false
             }
+        } catch (e: Exception) {
+            _versionStatus.value = VersionStatus.ERROR
+            false
         }
     }
 
+
     fun toggleEmulatorMode() {
         _isEmulatorMode.value = !_isEmulatorMode.value
-        checkAppVersion()
     }
 
     fun setCustomIpAddress(address: String) {
         _customIpAddress.value = address
-        checkAppVersion()
     }
 
     private fun getCurrentBaseUrl(): String {
@@ -162,37 +163,29 @@ class GameViewModel : ViewModel() {
 
     fun sendPlayerAction(action: String) {
         val session = currentSessionName ?: return
-
         _gameState.update { currentState ->
-            val updatedLines = currentState.narrativeLines + "\n\nSua ação: $action" + "Mestre de Jogo a pensar..."
+            val updatedLines = currentState.narrativeLines + "\n\n> $action" + " "
             currentState.copy(isLoading = true, narrativeLines = updatedLines)
         }
-
         viewModelScope.launch {
+            var newNarrative: String? = null
             try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/$session/execute_turn")
                 val payload = JSONObject().apply { put("player_action", action) }
                 val response = makeRequest(url, "POST", payload.toString())
-
-                val newLines = if (response != null) {
-                    val narrative = JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
-                    listOf("\n\n$narrative")
+                newNarrative = if (response != null) {
+                    JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
                 } else {
-                    listOf("\n\nErro do Servidor: Nenhuma resposta recebida.")
-                }
-
-                _gameState.update { currentState ->
-                    val currentLines = currentState.narrativeLines.dropLast(1)
-                    currentState.copy(narrativeLines = currentLines + newLines)
+                    "Erro do Servidor: Nenhuma resposta recebida."
                 }
             } catch (e: Exception) {
+                newNarrative = "Erro de Conexão: Verifique o servidor e o IP. (${e.message})"
+            } finally {
                 _gameState.update { currentState ->
                     val currentLines = currentState.narrativeLines.dropLast(1)
-                    val errorLine = "\n\nErro de Conexão: Verifique o servidor e o IP. (${e.message})"
-                    currentState.copy(narrativeLines = currentLines + errorLine)
+                    val finalLines = currentLines + "\n\n$newNarrative"
+                    currentState.copy(isLoading = false, narrativeLines = finalLines)
                 }
-            } finally {
-                _gameState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -219,8 +212,6 @@ class GameViewModel : ViewModel() {
         }
     }
 
-    // --- FUNÇÕES AUXILIARES ---
-
     private fun parseSessionList(jsonString: String): List<SessionInfo> {
         val list = mutableListOf<SessionInfo>()
         val jsonArray = JSONArray(jsonString)
@@ -244,8 +235,7 @@ class GameViewModel : ViewModel() {
                 connection.setRequestProperty("Content-Type", "application/json; utf-8")
                 connection.setRequestProperty("Accept", "application/json")
                 connection.connectTimeout = 15000
-                connection.readTimeout = 120000
-
+                connection.readTimeout = 60000
                 if (method == "POST" && body != null) {
                     connection.doOutput = true
                     OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
@@ -253,14 +243,11 @@ class GameViewModel : ViewModel() {
                         writer.flush()
                     }
                 }
-
                 if (connection.responseCode in 200..299) {
                     BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
                 } else {
-                    val errorStream = connection.errorStream?.let { BufferedReader(InputStreamReader(it, "UTF-8")).use { reader -> reader.readText() } } ?: connection.responseMessage
-                    println("Erro na requisição para $url: ${connection.responseCode} - $errorStream")
-                    // Retorna o corpo do erro para que a UI possa exibi-lo
-                    return@withContext errorStream
+                    println("Erro na requisição para $url: ${connection.responseCode} - ${connection.responseMessage}")
+                    null
                 }
             } catch (e: Exception) {
                 println("Exceção na requisição para $url: ${e.message}")

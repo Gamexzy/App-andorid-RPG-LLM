@@ -6,14 +6,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.android.rpgllm.data.GameViewModel
-import com.android.rpgllm.ui.theme.CharacterCreationScreen
-import com.android.rpgllm.ui.theme.MainScreen
-import com.android.rpgllm.ui.theme.SessionListScreen
+import com.android.rpgllm.ui.theme.GameScreen // Renomeado para clareza
+import com.android.rpgllm.ui.theme.HomeScreen
 
-// Define as "rotas" (identificadores únicos) para cada tela
 object AppRoutes {
-    const val SESSION_LIST = "session_list"
-    const val CHARACTER_CREATION = "character_creation"
+    const val HOME = "home"
     const val GAME_SCREEN = "game_screen/{sessionName}"
 
     fun gameScreen(sessionName: String) = "game_screen/$sessionName"
@@ -25,31 +22,18 @@ fun AppNavigation(gameViewModel: GameViewModel) {
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.SESSION_LIST
+        startDestination = AppRoutes.HOME
     ) {
-        composable(AppRoutes.SESSION_LIST) {
-            SessionListScreen(
-                gameViewModel = gameViewModel, // Passa o ViewModel
-                onNavigateToCreation = { navController.navigate(AppRoutes.CHARACTER_CREATION) },
-                onNavigateToGame = { sessionName -> navController.navigate(AppRoutes.gameScreen(sessionName)) }
-            )
-        }
-
-        composable(AppRoutes.CHARACTER_CREATION) {
-            CharacterCreationScreen(
-                gameViewModel = gameViewModel, // Passa o ViewModel
-                onNavigateBack = { navController.popBackStack() },
-                onSessionCreated = { sessionName ->
-                    navController.navigate(AppRoutes.gameScreen(sessionName)) {
-                        popUpTo(AppRoutes.SESSION_LIST)
-                    }
-                }
+        composable(AppRoutes.HOME) {
+            HomeScreen(
+                gameViewModel = gameViewModel,
+                rootNavController = navController
             )
         }
 
         composable(AppRoutes.GAME_SCREEN) { backStackEntry ->
             val sessionName = backStackEntry.arguments?.getString("sessionName") ?: "error_session"
-            MainScreen(
+            GameScreen( // O antigo MainScreen agora é GameScreen
                 gameViewModel = gameViewModel,
                 sessionName = sessionName
             )

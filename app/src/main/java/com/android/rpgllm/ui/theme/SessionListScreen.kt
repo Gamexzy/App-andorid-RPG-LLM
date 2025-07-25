@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,20 +15,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.data.SessionInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionListScreen(
-    gameViewModel: GameViewModel = viewModel(),
-    onNavigateToCreation: () -> Unit,
+    gameViewModel: GameViewModel,
     onNavigateToGame: (String) -> Unit
 ) {
     val uiState by gameViewModel.sessionListState.collectAsState()
 
-    // Busca as sessões quando o ecrã é exibido pela primeira vez
     LaunchedEffect(Unit) {
         gameViewModel.fetchSessions()
     }
@@ -45,14 +40,6 @@ fun SessionListScreen(
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreation,
-                containerColor = Color(0xFF00C853)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Criar Nova Saga", tint = Color.White)
-            }
-        }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -65,10 +52,9 @@ fun SessionListScreen(
                 uiState.isLoading -> {
                     CircularProgressIndicator(color = Color(0xFF00C853))
                 }
-                // --- CORREÇÃO APLICADA AQUI ---
                 uiState.errorMessage != null -> {
                     Text(
-                        text = "Erro ao carregar sagas:\n${uiState.errorMessage}",
+                        text = "Erro ao carregar sagas:\n${uiState.errorMessage}\n\nVá para Configurações para verificar a conexão.",
                         color = Color.Red,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(16.dp)
@@ -76,7 +62,7 @@ fun SessionListScreen(
                 }
                 uiState.sessions.isEmpty() -> {
                     Text(
-                        "Nenhuma saga encontrada.\nClique em '+' para criar uma nova aventura!",
+                        "Nenhuma saga encontrada.\nUse o separador 'Criar' para começar uma nova aventura!",
                         color = Color.Gray,
                         textAlign = TextAlign.Center
                     )

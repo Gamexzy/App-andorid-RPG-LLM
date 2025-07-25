@@ -21,17 +21,12 @@ import com.android.rpgllm.data.PlayerPossession
 
 @Composable
 fun DrawerContent(
-    gameState: GameState,
-    isEmulatorMode: Boolean,
-    onToggleEmulatorMode: () -> Unit,
-    customIpAddress: String, // NOVO
-    onCustomIpChange: (String) -> Unit // NOVO
+    gameState: GameState
 ) {
     ModalDrawerSheet(
         modifier = Modifier.background(Color(0xFF1E1E1E))
     ) {
         LazyColumn(modifier = Modifier.padding(16.dp)) {
-            // ... (Cabeçalho, Ficha e Inventário permanecem iguais) ...
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -57,59 +52,10 @@ fun DrawerContent(
             } else {
                 items(gameState.possessions) { p -> InventoryItemRow(item = p) }
             }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-
-
-            // --- SEÇÃO DE CONFIGURAÇÕES ATUALIZADA ---
-            item {
-                SectionTitle("Configurações de Conexão")
-
-                // Campo para IP customizado (ngrok)
-                OutlinedTextField(
-                    value = customIpAddress,
-                    onValueChange = onCustomIpChange,
-                    label = { Text("Endereço Remoto (ngrok/VPN)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF00C853),
-                        unfocusedBorderColor = Color(0xFF616161),
-                        cursorColor = Color(0xFF00C853),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedContainerColor = Color(0xFF303030),
-                        unfocusedContainerColor = Color(0xFF303030),
-                        focusedLabelColor = Color(0xFF00C853),
-                        unfocusedLabelColor = Color(0xFF9E9E9E)
-                    )
-                )
-
-                // Switch para modo Emulador
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("Modo Emulador (10.0.2.2)", color = Color.Gray, fontSize = 14.sp)
-                    Switch(
-                        checked = isEmulatorMode,
-                        onCheckedChange = { onToggleEmulatorMode() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFF00C853),
-                            checkedTrackColor = Color(0xFF335C3D),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color(0xFF303030)
-                        ),
-                        // Desabilita o switch se um IP customizado estiver em uso
-                        enabled = customIpAddress.isBlank()
-                    )
-                }
-            }
         }
     }
 }
 
-// ... (O resto do arquivo permanece igual) ...
 @Composable
 fun SectionTitle(title: String) {
     Text(
