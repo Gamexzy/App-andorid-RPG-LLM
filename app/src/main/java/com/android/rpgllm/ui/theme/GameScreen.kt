@@ -1,5 +1,4 @@
 // app/src/main/java/com/android/rpgllm/ui/theme/GameScreen.kt
-// Renomeando o ficheiro MainScreen.kt para GameScreen.kt para melhor clareza
 package com.android.rpgllm.ui.theme
 
 import androidx.compose.material.icons.Icons
@@ -32,6 +31,7 @@ fun GameScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val gameState by gameViewModel.gameState.collectAsState()
+    val toolMenuState by gameViewModel.toolMenuState.collectAsState() // NOVO
 
     LaunchedEffect(key1 = sessionName) {
         gameViewModel.loadSession(sessionName)
@@ -46,7 +46,7 @@ fun GameScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            DrawerContent(gameState = gameState) // As configurações foram removidas daqui
+            DrawerContent(gameState = gameState)
         },
     ) {
         Scaffold(
@@ -70,10 +70,13 @@ fun GameScreen(
                 )
             }
         ) { innerPadding ->
+            // O RpgTextScreen agora recebe os estados e callbacks do menu de ferramentas
             RpgTextScreen(
                 gameState = gameState,
+                toolMenuState = toolMenuState,
                 contentPadding = innerPadding,
-                onSendAction = { action -> gameViewModel.sendPlayerAction(action) }
+                onSendAction = { action -> gameViewModel.processPlayerInput(action) },
+                onToolSelected = { tool -> gameViewModel.onToolSelected(tool) }
             )
         }
     }

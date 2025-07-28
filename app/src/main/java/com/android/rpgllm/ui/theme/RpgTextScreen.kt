@@ -1,16 +1,24 @@
 // app/src/main/java/com/android/rpgllm/ui/theme/RpgTextScreen.kt
 package com.android.rpgllm.ui.theme
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -19,18 +27,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.rpgllm.data.GameState
+import com.android.rpgllm.data.GameTool
+import com.android.rpgllm.data.ToolMenuUiState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RpgTextScreen(
     gameState: GameState,
+    toolMenuState: ToolMenuUiState, // NOVO
     contentPadding: PaddingValues,
-    onSendAction: (String) -> Unit
+    onSendAction: (String) -> Unit,
+    onToolSelected: (GameTool) -> Unit // NOVO
 ) {
     var playerInput by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
-    // Efeito para rolar para o final da narrativa sempre que ela é atualizada
     LaunchedEffect(gameState.narrativeLines.size) {
         if (gameState.narrativeLines.isNotEmpty()) {
             listState.animateScrollToItem(gameState.narrativeLines.lastIndex)
@@ -38,9 +48,8 @@ fun RpgTextScreen(
     }
 
     val sendAction = {
-        val currentInput = playerInput.trim()
-        if (currentInput.isNotEmpty() && !gameState.isLoading) {
-            onSendAction(currentInput)
+        if (playerInput.isNotBlank() && !gameState.isLoading) {
+            onSendAction(playerInput)
             playerInput = ""
         }
     }
@@ -52,6 +61,7 @@ fun RpgTextScreen(
             .background(Color(0xFF121212))
             .padding(16.dp)
     ) {
+        // Área da Narrativa
         Surface(
             modifier = Modifier
                 .weight(1f)
@@ -61,7 +71,7 @@ fun RpgTextScreen(
         ) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().padding(12.dp)
+                modifier = Modifier.padding(12.dp)
             ) {
                 items(gameState.narrativeLines) { line ->
                     Text(
@@ -78,6 +88,19 @@ fun RpgTextScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // NOVO: Seção do Menu de Ferramentas
+        AnimatedVisibility(
+            visible = toolMenuState.isVisible,
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300))
+        ) {
+            ToolMenu(
+                uiState = toolMenuState,
+                onToolSelected = onToolSelected,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
         if (gameState.isLoading) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth().height(4.dp).padding(bottom = 8.dp),
@@ -86,12 +109,13 @@ fun RpgTextScreen(
             )
         }
 
+        // Área de Input
         OutlinedTextField(
             value = playerInput,
             onValueChange = { playerInput = it },
-            label = { Text("Digite sua ação aqui...") },
+            label = { Text("Digite sua ação ou /tools...") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Color(0xFF00C853),
                 unfocusedBorderColor = Color(0xFF616161),
@@ -108,20 +132,46 @@ fun RpgTextScreen(
             enabled = !gameState.isLoading
         )
 
-        Button(
-            onClick = sendAction,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            enabled = !gameState.isLoading,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
-            shape = RoundedCornerShape(12.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-        ) {
-            Text(
-                text = if (gameState.isLoading) "Enviando..." else "Enviar Ação",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+        // Botão de Enviar (opcional, já que o teclado tem o botão de enviar)
+        // Button( ... )
+    }
+}
+
+@Composable
+fun ToolMenu(
+    uiState: ToolMenuUiState,
+    onToolSelected: (GameTool) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(60.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (uiState.isLoading) {
+            CircularProgressIndicator(color = Color(0xFF00C853))
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(uiState.tools) { tool ->
+                    Button(
+                        onClick = { onToolSelected(tool) },
+                        shape = RoundedCornerShape(50),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF333333),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(tool.displayName, fontSize = 12.sp)
+                    }
+                }
+            }
         }
     }
 }
