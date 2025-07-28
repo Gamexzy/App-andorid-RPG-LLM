@@ -142,15 +142,29 @@ class GameViewModel : ViewModel() {
         _customIpAddress.value = address
     }
 
+    /**
+     * ATUALIZADO: Gera a URL base para as requisições.
+     * Agora, se o endereço customizado for uma URL completa (começando com http:// ou https://),
+     * ele será usado diretamente. Isso permite o uso de URLs do ngrok.
+     * Caso contrário, ele montará a URL usando a lógica de IP e porta como antes.
+     */
     private fun getCurrentBaseUrl(): String {
-        val customIp = _customIpAddress.value.trim()
+        val customAddress = _customIpAddress.value.trim()
+
+        // Se o usuário fornecer uma URL completa (como a do ngrok), use-a diretamente.
+        if (customAddress.startsWith("http://") || customAddress.startsWith("https://")) {
+            return customAddress
+        }
+
+        // Caso contrário, volte para a lógica baseada em IP.
         val finalIp = when {
-            customIp.isNotEmpty() -> customIp.removePrefix("http://").removePrefix("https://").split(":").first()
+            customAddress.isNotEmpty() -> customAddress // Assume que é um IP se não tiver protocolo
             _isEmulatorMode.value -> emulatorIp
             else -> physicalDeviceIp
         }
         return "http://$finalIp:5000"
     }
+
 
     fun sendPlayerAction(action: String) {
         val session = currentSessionName ?: return
@@ -162,9 +176,6 @@ class GameViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-            // --- CORREÇÃO APLICADA AQUI ---
-            // A variável 'newLines' é agora uma 'val' e recebe o resultado do bloco 'try-catch',
-            // garantindo que ela seja sempre inicializada.
             val newLines: List<String> = try {
                 val url = URL("${getCurrentBaseUrl()}/sessions/$session/execute_turn")
                 val payload = JSONObject().apply { put("player_action", action) }
@@ -177,7 +188,7 @@ class GameViewModel : ViewModel() {
                     listOf("\n\nErro do Servidor: Nenhuma resposta recebida.")
                 }
             } catch (e: Exception) {
-                listOf("\n\nErro de Conexão: Verifique o servidor e o IP. (${e.message})")
+                listOf("\n\nErro de Conexão: Verifique o servidor e o IP/URL. (${e.message})")
             }
 
             // Atualiza o estado da UI com a resposta do servidor
@@ -201,7 +212,6 @@ class GameViewModel : ViewModel() {
                     val parsedState = parseGameState(response)
                     _gameState.update { currentState ->
                         val narrative = if(isInitialLoad) {
-                            // Mantém a narrativa de criação se for o primeiro carregamento
                             if (currentState.narrativeLines.size <= 1) {
                                 currentState.narrativeLines
                             } else {
