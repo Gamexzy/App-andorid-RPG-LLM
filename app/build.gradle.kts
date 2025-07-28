@@ -13,7 +13,7 @@ android {
         minSdk = 24
         targetSdk = 35
         versionCode = 3 // Incrementando a versão
-        versionName = "1.2" // Versão compatível com o novo servidor
+        versionName = "1.5" // Versão compatível com o novo servidor
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
