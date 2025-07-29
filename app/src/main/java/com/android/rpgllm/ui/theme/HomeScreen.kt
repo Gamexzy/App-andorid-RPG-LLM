@@ -4,15 +4,19 @@ package com.android.rpgllm.ui.theme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -35,11 +39,30 @@ object HomeRoutes {
 @Composable
 fun HomeScreen(
     gameViewModel: GameViewModel,
-    rootNavController: NavController // O controlador de navegação principal para ir para a tela de jogo
+    onNavigateToGame: (String) -> Unit,
+    onLogout: () -> Unit // Callback para deslogar
 ) {
     val homeNavController = rememberNavController()
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Minhas Sagas") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFF121212),
+                    titleContentColor = Color.White
+                ),
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Sair",
+                            tint = Color.White
+                        )
+                    }
+                }
+            )
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = Color(0xFF1E1E1E)
@@ -51,7 +74,7 @@ fun HomeScreen(
                     icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Sagas") },
                     label = { Text("Sagas") },
                     selected = currentRoute == HomeRoutes.SESSION_LIST,
-                    onClick = { homeNavController.navigate(HomeRoutes.SESSION_LIST) },
+                    onClick = { homeNavController.navigate(HomeRoutes.SESSION_LIST) { popUpTo(homeNavController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color(0xFF00C853),
                         unselectedIconColor = Color.Gray,
@@ -64,7 +87,7 @@ fun HomeScreen(
                     icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Criar") },
                     label = { Text("Criar") },
                     selected = currentRoute == HomeRoutes.CHARACTER_CREATION,
-                    onClick = { homeNavController.navigate(HomeRoutes.CHARACTER_CREATION) },
+                    onClick = { homeNavController.navigate(HomeRoutes.CHARACTER_CREATION) { popUpTo(homeNavController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color(0xFF00C853),
                         unselectedIconColor = Color.Gray,
@@ -77,7 +100,7 @@ fun HomeScreen(
                     icon = { Icon(Icons.Filled.Settings, contentDescription = "Configurações") },
                     label = { Text("Configurações") },
                     selected = currentRoute == HomeRoutes.SETTINGS,
-                    onClick = { homeNavController.navigate(HomeRoutes.SETTINGS) },
+                    onClick = { homeNavController.navigate(HomeRoutes.SETTINGS) { popUpTo(homeNavController.graph.startDestinationId) { saveState = true }; launchSingleTop = true; restoreState = true } },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = Color(0xFF00C853),
                         unselectedIconColor = Color.Gray,
@@ -97,22 +120,13 @@ fun HomeScreen(
             composable(HomeRoutes.SESSION_LIST) {
                 SessionListScreen(
                     gameViewModel = gameViewModel,
-                    onNavigateToGame = { sessionName ->
-                        // Usa o controlador de navegação raiz para ir para a tela de jogo
-                        rootNavController.navigate("game_screen/$sessionName")
-                    }
+                    onNavigateToGame = onNavigateToGame
                 )
             }
             composable(HomeRoutes.CHARACTER_CREATION) {
                 CharacterCreationScreen(
                     gameViewModel = gameViewModel,
-                    onSessionCreated = { sessionName ->
-                        // Usa o controlador de navegação raiz para ir para a tela de jogo
-                        rootNavController.navigate("game_screen/$sessionName") {
-                            // Limpa a pilha de volta para a lista de sessões
-                            popUpTo(rootNavController.graph.startDestinationId)
-                        }
-                    }
+                    onSessionCreated = onNavigateToGame
                 )
             }
             composable(HomeRoutes.SETTINGS) {

@@ -21,8 +21,6 @@ import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 
-// As classes de dados foram movidas para Models.kt
-
 enum class VersionStatus { NONE, CHECKING, UP_TO_DATE, OUTDATED, ERROR }
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,7 +43,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _toolMenuState = MutableStateFlow(ToolMenuUiState())
     val toolMenuState: StateFlow<ToolMenuUiState> = _toolMenuState.asStateFlow()
 
-    // --- Configurações de Conexão ---
+    private val _authUiState = MutableStateFlow(AuthUiState())
+    val authUiState: StateFlow<AuthUiState> = _authUiState.asStateFlow()
+
+    // --- Configurações de Conexão (CORRIGIDO) ---
     private val _isEmulatorMode = MutableStateFlow(false)
     val isEmulatorMode: StateFlow<Boolean> = _isEmulatorMode.asStateFlow()
 
@@ -54,10 +55,85 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private var currentSessionName: String? = null
     private val emulatorIp = "10.0.2.2"
-    private val physicalDeviceIp = "192.168.0.104" // Lembre-se de ajustar se necessário
+    private val physicalDeviceIp = "192.168.0.104" // Ajuste se o IP da sua máquina for diferente
 
     init {
         loadIpAddress()
+        checkUserLoggedIn()
+    }
+
+    // --- LÓGICA DE AUTENTICAÇÃO ---
+
+    private fun checkUserLoggedIn() {
+        val token = sharedPreferences.getString("JWT_TOKEN", null)
+        _authUiState.update { it.copy(isAuthenticated = !token.isNullOrBlank()) }
+    }
+
+    fun login(username: String, password: String) {
+        _authUiState.update { it.copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            val result = performAuthRequest("/login", username, password)
+            if (result is AuthResult.Success) {
+                _authUiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+            } else if (result is AuthResult.Error) {
+                _authUiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+            }
+        }
+    }
+
+    fun register(username: String, password: String) {
+        _authUiState.update { it.copy(isLoading = true, errorMessage = null) }
+        viewModelScope.launch {
+            val result = performAuthRequest("/register", username, password)
+            if (result is AuthResult.Success) {
+                login(username, password)
+            } else if (result is AuthResult.Error) {
+                _authUiState.update { it.copy(isLoading = false, errorMessage = result.message) }
+            }
+        }
+    }
+
+    fun logout() {
+        with(sharedPreferences.edit()) {
+            remove("JWT_TOKEN")
+            apply()
+        }
+        _authUiState.update { AuthUiState(isAuthenticated = false) }
+    }
+
+    fun clearAuthError() {
+        _authUiState.update { it.copy(errorMessage = null) }
+    }
+
+    private suspend fun performAuthRequest(endpoint: String, username: String, password: String): AuthResult {
+        return try {
+            val url = URL("${getCurrentBaseUrl()}$endpoint")
+            val payload = JSONObject().apply {
+                put("username", username)
+                put("password", password)
+            }
+            val response = makeRequest(url, "POST", payload.toString(), requiresAuth = false)
+            val jsonResponse = JSONObject(response ?: "{}")
+
+            if (response != null && !jsonResponse.has("error")) {
+                val token = jsonResponse.optString("token", null)
+                if (token != null) {
+                    saveToken(token)
+                }
+                AuthResult.Success
+            } else {
+                AuthResult.Error(jsonResponse.optString("error", "Erro desconhecido."))
+            }
+        } catch (e: Exception) {
+            AuthResult.Error("Erro de conexão: ${e.message}")
+        }
+    }
+
+    private fun saveToken(token: String) {
+        with(sharedPreferences.edit()) {
+            putString("JWT_TOKEN", token)
+            apply()
+        }
     }
 
     // --- LÓGICA DE NAVEGAÇÃO E SESSÃO ---
@@ -83,17 +159,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     put("world_concept", worldConcept)
                 }
                 val response = makeRequest(url, "POST", payload.toString())
-                if (response != null) {
+                if (response != null && !JSONObject(response).has("error")) {
                     val jsonResponse = JSONObject(response)
                     val newSessionName = jsonResponse.getString("session_name")
                     val initialNarrative = jsonResponse.getString("initial_narrative")
-
                     val initialHistory = listOf(initialNarrative)
                     saveChatHistory(newSessionName, initialHistory)
                     _gameState.value = GameState(narrativeLines = initialHistory)
                     onSessionCreated(newSessionName)
                 } else {
-                    _creationState.update { it.copy(isLoading = false, errorMessage = "Falha ao criar sessão.") }
+                    val errorMsg = JSONObject(response ?: "{}").optString("error", "Falha ao criar sessão.")
+                    _creationState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                 }
             } catch (e: Exception) {
                 _creationState.update { it.copy(isLoading = false, errorMessage = "Erro de conexão: ${e.message}") }
@@ -183,7 +259,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    // --- FUNÇÕES DE PERSISTÊNCIA ---
+    // --- FUNÇÕES DE PERSISTÊNCIA E CONFIGURAÇÃO ---
 
     private fun saveIpAddress(address: String) {
         with(sharedPreferences.edit()) {
@@ -193,8 +269,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun loadIpAddress() {
-        val savedIp = sharedPreferences.getString("CUSTOM_IP_ADDRESS", "") ?: ""
-        _customIpAddress.value = savedIp
+        _customIpAddress.value = sharedPreferences.getString("CUSTOM_IP_ADDRESS", "") ?: ""
+        _isEmulatorMode.value = sharedPreferences.getBoolean("IS_EMULATOR_MODE", false)
     }
 
     private fun saveChatHistory(sessionName: String, history: List<String>) {
@@ -211,12 +287,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val jsonArray = JSONArray(jsonString)
                 (0 until jsonArray.length()).map { jsonArray.getString(it) }
-            } catch (e: Exception) {
-                emptyList()
-            }
-        } else {
-            emptyList()
-        }
+            } catch (e: Exception) { emptyList() }
+        } else { emptyList() }
     }
 
     fun setCustomIpAddress(address: String) {
@@ -224,25 +296,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         saveIpAddress(address)
     }
 
+    // --- CORRIGIDO ---
+    fun toggleEmulatorMode() {
+        val newState = !_isEmulatorMode.value
+        _isEmulatorMode.value = newState
+        with(sharedPreferences.edit()) {
+            putBoolean("IS_EMULATOR_MODE", newState)
+            apply()
+        }
+    }
+
     fun fetchSessions() {
         _sessionListState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            val canProceed = checkAppVersion()
-            if (canProceed) {
-                try {
-                    val url = URL("${getCurrentBaseUrl()}/sessions")
-                    val response = makeRequest(url, "GET")
-                    if (response != null) {
-                        val sessions = parseSessionList(response)
-                        _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
-                    } else {
-                        _sessionListState.update { it.copy(isLoading = false, errorMessage = "Nenhuma resposta do servidor.") }
-                    }
-                } catch (e: Exception) {
-                    _sessionListState.update { it.copy(isLoading = false, errorMessage = e.message) }
+            try {
+                val url = URL("${getCurrentBaseUrl()}/sessions")
+                val response = makeRequest(url, "GET")
+                if (response != null && !JSONObject(response).has("error")) {
+                    val sessions = parseSessionList(response)
+                    _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
+                } else {
+                    val errorMsg = JSONObject(response ?: "{}").optString("error", "Nenhuma resposta do servidor.")
+                    _sessionListState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
                 }
-            } else {
-                _sessionListState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                _sessionListState.update { it.copy(isLoading = false, errorMessage = e.message) }
             }
         }
     }
@@ -251,7 +329,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _versionStatus.value = VersionStatus.CHECKING
         return try {
             val url = URL("${getCurrentBaseUrl()}/status")
-            val response = makeRequest(url, "GET")
+            val response = makeRequest(url, "GET", requiresAuth = false)
             if (response != null) {
                 val serverInfo = JSONObject(response)
                 val minVersion = serverInfo.getString("minimum_client_version")
@@ -272,8 +350,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun toggleEmulatorMode() { _isEmulatorMode.value = !_isEmulatorMode.value }
-
+    // --- CORRIGIDO ---
     private fun getCurrentBaseUrl(): String {
         val customAddress = _customIpAddress.value.trim()
         if (customAddress.startsWith("http://") || customAddress.startsWith("https://")) {
@@ -310,18 +387,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // --- FUNÇÕES DE PARSE E REDE ---
+
     private fun parseTools(jsonString: String): List<GameTool> {
         val tools = mutableListOf<GameTool>()
         try {
             val jsonArray = JSONArray(jsonString)
             for (i in 0 until jsonArray.length()) {
                 val jsonObject = jsonArray.getJSONObject(i)
-                tools.add(
-                    GameTool(
-                        displayName = jsonObject.getString("displayName"),
-                        command = jsonObject.getString("command")
-                    )
-                )
+                tools.add(GameTool(displayName = jsonObject.getString("displayName"), command = jsonObject.getString("command")))
             }
         } catch (e: Exception) {
             println("Erro ao parsear as ferramentas: $e")
@@ -334,18 +408,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val jsonArray = JSONArray(jsonString)
         for (i in 0 until jsonArray.length()) {
             val jsonObject = jsonArray.getJSONObject(i)
-            list.add(
-                SessionInfo(
-                    session_name = jsonObject.getString("session_name"),
-                    player_name = jsonObject.getString("player_name"),
-                    world_concept = jsonObject.getString("world_concept")
-                )
-            )
+            list.add(SessionInfo(session_name = jsonObject.getString("session_name"), player_name = jsonObject.getString("player_name"), world_concept = jsonObject.getString("world_concept")))
         }
         return list
     }
 
-    private suspend fun makeRequest(url: URL, method: String, body: String? = null): String? {
+    private suspend fun makeRequest(url: URL, method: String, body: String? = null, requiresAuth: Boolean = true): String? {
         return withContext(Dispatchers.IO) {
             var connection: HttpURLConnection? = null
             try {
@@ -355,17 +423,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 connection.setRequestProperty("Accept", "application/json")
                 connection.connectTimeout = 15000
                 connection.readTimeout = 120000
+
+                if (requiresAuth) {
+                    val token = sharedPreferences.getString("JWT_TOKEN", null)
+                    if (token != null) {
+                        connection.setRequestProperty("Authorization", "Bearer $token")
+                    } else {
+                        // Se requer autenticação e não há token, lança exceção para ser tratada
+                        // Isso pode acontecer se o token expirar e o app tentar fazer uma chamada
+                        // antes de redirecionar para o login.
+                        throw Exception("Token de autenticação ausente.")
+                    }
+                }
+
                 if (method == "POST" && body != null) {
                     connection.doOutput = true
                     OutputStreamWriter(connection.outputStream, "UTF-8").use { it.write(body) }
                 }
+
                 if (connection.responseCode in 200..299) {
                     BufferedReader(InputStreamReader(connection.inputStream, "UTF-8")).use { it.readText() }
                 } else {
-                    null
+                    val errorStream = connection.errorStream?.let { BufferedReader(InputStreamReader(it, "UTF-8")).use { br -> br.readText() } }
+                    println("HTTP Error ${connection.responseCode}: $errorStream")
+                    errorStream ?: "{\"error\": \"Erro HTTP ${connection.responseCode}\"}"
                 }
             } catch (e: Exception) {
-                null
+                println("Request Exception: ${e.message}")
+                "{\"error\": \"Erro de conexão: ${e.message}\"}"
             } finally {
                 connection?.disconnect()
             }
@@ -375,28 +460,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun parseGameState(jsonString: String): GameState {
         val json = JSONObject(jsonString)
         val baseJson = json.optJSONObject("base") ?: JSONObject()
-        val playerBase = PlayerBase(
-            nome = baseJson.optString("nome", "N/A"),
-            local_nome = baseJson.optString("local_nome", "N/A")
-        )
+        val playerBase = PlayerBase(nome = baseJson.optString("nome", "N/A"), local_nome = baseJson.optString("local_nome", "N/A"))
         val vitalsJson = json.optJSONObject("vitals") ?: JSONObject()
-        val playerVitals = PlayerVitals(
-            fome = vitalsJson.optString("fome", "-"),
-            sede = vitalsJson.optString("sede", "-"),
-            cansaco = vitalsJson.optString("cansaco", "-"),
-            humor = vitalsJson.optString("humor", "-")
-        )
+        val playerVitals = PlayerVitals(fome = vitalsJson.optString("fome", "-"), sede = vitalsJson.optString("sede", "-"), cansaco = vitalsJson.optString("cansaco", "-"), humor = vitalsJson.optString("humor", "-"))
         val possessionsJsonArray = json.optJSONArray("posses")
         val possessionsList = mutableListOf<PlayerPossession>()
         if (possessionsJsonArray != null) {
             for (i in 0 until possessionsJsonArray.length()) {
                 val pJson = possessionsJsonArray.getJSONObject(i)
-                possessionsList.add(
-                    PlayerPossession(
-                        itemName = pJson.optString("item_nome", "Item desconhecido"),
-                        profile = JSONObject(pJson.optString("perfil_json", "{}"))
-                    )
-                )
+                possessionsList.add(PlayerPossession(itemName = pJson.optString("item_nome", "Item desconhecido"), profile = JSONObject(pJson.optString("perfil_json", "{}"))))
             }
         }
         return GameState(base = playerBase, vitals = playerVitals, possessions = possessionsList)

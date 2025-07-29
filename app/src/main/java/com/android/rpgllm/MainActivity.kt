@@ -25,8 +25,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // A verificação de versão foi removida daqui.
-                    // A aplicação agora inicia diretamente na navegação principal.
+                    // A navegação agora gerencia o fluxo de autenticação
                     AppNavigation(gameViewModel = gameViewModel)
                 }
             }
