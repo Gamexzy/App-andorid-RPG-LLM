@@ -35,7 +35,7 @@ data class ToolMenuUiState(
     val tools: List<GameTool> = emptyList()
 )
 
-// --- Modelos para a Tela de Jogo (Movidos de GameState.kt para cá) ---
+// --- Modelos para a Tela de Jogo ---
 
 data class GameState(
     // Dados do Servidor
@@ -64,3 +64,24 @@ data class PlayerPossession(
     val itemName: String = "Item desconhecido",
     val profile: JSONObject = JSONObject()
 )
+
+// --- NOVOS MODELOS PARA AUTENTICAÇÃO ---
+
+/**
+ * Representa o estado da UI para as telas de autenticação.
+ */
+data class AuthUiState(
+    val isAuthenticated: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
+
+/**
+ * Representa o resultado de uma operação de autenticação (login/registo).
+ * É uma sealed class para garantir que apenas os resultados definidos (Success, Error)
+ * possam ser utilizados, tornando o código mais seguro e previsível.
+ */
+sealed class AuthResult {
+    object Success : AuthResult()
+    data class Error(val message: String) : AuthResult()
+}

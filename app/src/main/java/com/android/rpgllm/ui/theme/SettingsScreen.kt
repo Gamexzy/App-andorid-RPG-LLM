@@ -1,4 +1,3 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/SettingsScreen.kt
 package com.android.rpgllm.ui.theme
 
 import androidx.compose.foundation.background
@@ -21,15 +20,12 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
     val isEmulatorMode by gameViewModel.isEmulatorMode.collectAsState()
     val customIpAddress by gameViewModel.customIpAddress.collectAsState()
     val versionStatus by gameViewModel.versionStatus.collectAsState()
-
-    // --- CORREÇÃO APLICADA AQUI ---
-    // Obtém o escopo da coroutine para poder chamar funções suspend a partir de eventos da UI
     val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configurações de Conexão") },
+                title = { Text("Configurações e Conta") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color(0xFF121212),
                     titleContentColor = Color.White
@@ -44,6 +40,10 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 .background(Color(0xFF1E1E1E))
                 .padding(16.dp),
         ) {
+            // --- Seção de Conexão ---
+            Text("Conexão com o Servidor", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = customIpAddress,
                 onValueChange = { gameViewModel.setCustomIpAddress(it) },
@@ -52,17 +52,7 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF00C853),
-                    unfocusedBorderColor = Color(0xFF616161),
-                    cursorColor = Color(0xFF00C853),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedContainerColor = Color(0xFF303030),
-                    unfocusedContainerColor = Color(0xFF303030),
-                    focusedLabelColor = Color(0xFF00C853),
-                    unfocusedLabelColor = Color(0xFF9E9E9E)
-                )
+                colors = outlinedTextFieldColors()
             )
 
             Row(
@@ -76,20 +66,13 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 Switch(
                     checked = isEmulatorMode,
                     onCheckedChange = { gameViewModel.toggleEmulatorMode() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF00C853),
-                        checkedTrackColor = Color(0xFF335C3D),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color(0xFF303030)
-                    ),
+                    colors = switchColors(),
                     enabled = customIpAddress.isBlank()
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
             Button(
                 onClick = {
-                    // --- CORREÇÃO APLICADA AQUI ---
-                    // Lança a coroutine para chamar a função suspend
                     scope.launch {
                         gameViewModel.checkAppVersion()
                     }
@@ -97,27 +80,59 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
             ) {
-                Text("Verificar Conexão com o Servidor")
+                Text("Verificar Conexão")
             }
             Spacer(Modifier.height(16.dp))
 
-            when (versionStatus) {
-                VersionStatus.CHECKING -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally), color = Color(0xFF00C853))
-                }
-                VersionStatus.UP_TO_DATE -> {
-                    Text("Conectado! A versão do servidor é compatível.", color = Color(0xFF00C853), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                }
-                VersionStatus.OUTDATED -> {
-                    Text("Atualização Necessária! A versão do servidor é mais recente.", color = Color.Yellow, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                }
-                VersionStatus.ERROR -> {
-                    Text("Erro de Conexão. Verifique o endereço IP e se o servidor está online.", color = Color.Red, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                }
-                VersionStatus.NONE -> {
-                    Text("Clique no botão acima para verificar a conexão.", color = Color.Gray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            // Indicador de Status da Conexão
+            Box(modifier = Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                when (versionStatus) {
+                    VersionStatus.CHECKING -> CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF00C853))
+                    VersionStatus.UP_TO_DATE -> Text("Conectado! Versão compatível.", color = Color(0xFF00C853))
+                    VersionStatus.OUTDATED -> Text("Atualização Necessária!", color = Color.Yellow)
+                    VersionStatus.ERROR -> Text("Erro de Conexão.", color = Color.Red)
+                    VersionStatus.NONE -> Text("Verifique a conexão com o servidor.", color = Color.Gray)
                 }
             }
+
+            // --- Divisor e Seção da Conta ---
+            HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
+
+            Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+            Spacer(Modifier.height(16.dp))
+
+            // Botão de Logout
+            Button(
+                onClick = { gameViewModel.logout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)) // Cor de perigo
+            ) {
+                Text("Sair (Logout)")
+            }
+
+            Spacer(Modifier.weight(1f))
         }
     }
 }
+
+// Funções de estilo auxiliares
+@Composable
+private fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedBorderColor = Color(0xFF00C853),
+    unfocusedBorderColor = Color(0xFF616161),
+    cursorColor = Color(0xFF00C853),
+    focusedTextColor = Color.White,
+    unfocusedTextColor = Color.White,
+    focusedContainerColor = Color(0xFF303030),
+    unfocusedContainerColor = Color(0xFF303030),
+    focusedLabelColor = Color(0xFF00C853),
+    unfocusedLabelColor = Color(0xFF9E9E9E)
+)
+
+@Composable
+private fun switchColors() = SwitchDefaults.colors(
+    checkedThumbColor = Color(0xFF00C853),
+    checkedTrackColor = Color(0xFF335C3D),
+    uncheckedThumbColor = Color.Gray,
+    uncheckedTrackColor = Color(0xFF303030)
+)

@@ -1,7 +1,7 @@
-// app/src/main/java/com/android/rpgllm/navigation/AppNavigation.kt
 package com.android.rpgllm.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
@@ -13,10 +13,9 @@ import com.android.rpgllm.ui.theme.GameScreen
 import com.android.rpgllm.ui.theme.HomeScreen
 
 object AppRoutes {
-    const val AUTH = "auth" // Tela de Login/Registro
+    const val AUTH = "auth"
     const val HOME = "home"
     const val GAME_SCREEN = "game_screen/{sessionName}"
-
     fun gameScreen(sessionName: String) = "game_screen/$sessionName"
 }
 
@@ -24,6 +23,18 @@ object AppRoutes {
 fun AppNavigation(gameViewModel: GameViewModel) {
     val navController = rememberNavController()
     val authState by gameViewModel.authUiState.collectAsState()
+
+    // Este efeito observa o estado de autenticação.
+    // Se o utilizador fizer logout (isAuthenticated torna-se falso),
+    // ele navegará para a tela de autenticação e limpará a pilha de navegação.
+    LaunchedEffect(authState.isAuthenticated) {
+        // Apenas navega se o destino atual não for já a tela de autenticação
+        if (!authState.isAuthenticated && navController.currentDestination?.route != AppRoutes.AUTH) {
+            navController.navigate(AppRoutes.AUTH) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+            }
+        }
+    }
 
     // Define a rota inicial baseada no estado de autenticação
     val startDestination = if (authState.isAuthenticated) AppRoutes.HOME else AppRoutes.AUTH
@@ -45,17 +56,12 @@ fun AppNavigation(gameViewModel: GameViewModel) {
         }
 
         composable(AppRoutes.HOME) {
+            // A chamada para HomeScreen está corrigida.
+            // Agora passamos o navController principal para que ele possa
+            // navegar para a GameScreen a partir das suas telas internas.
             HomeScreen(
                 gameViewModel = gameViewModel,
-                onNavigateToGame = { sessionName ->
-                    navController.navigate(AppRoutes.gameScreen(sessionName))
-                },
-                onLogout = {
-                    // Navega para a tela de auth e limpa todas as outras telas da pilha
-                    navController.navigate(AppRoutes.AUTH) {
-                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
-                    }
-                }
+                rootNavController = navController
             )
         }
 
