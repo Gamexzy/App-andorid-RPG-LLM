@@ -3,21 +3,6 @@ package com.android.rpgllm.data
 
 import org.json.JSONObject
 
-// --- NOVO: Modelos para Autenticação ---
-
-// Representa o resultado de uma operação de login/registro
-sealed class AuthResult {
-    object Success : AuthResult()
-    data class Error(val message: String) : AuthResult()
-}
-
-// Representa o estado da UI para a tela de autenticação
-data class AuthUiState(
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null,
-    val isAuthenticated: Boolean = false // Indica se o usuário está logado
-)
-
 // --- Modelos para a Lista de Sessões e Criação ---
 
 data class SessionInfo(
@@ -50,7 +35,7 @@ data class ToolMenuUiState(
     val tools: List<GameTool> = emptyList()
 )
 
-// --- Modelos para a Tela de Jogo ---
+// --- Modelos para a Tela de Jogo (Movidos de GameState.kt para cá) ---
 
 data class GameState(
     // Dados do Servidor

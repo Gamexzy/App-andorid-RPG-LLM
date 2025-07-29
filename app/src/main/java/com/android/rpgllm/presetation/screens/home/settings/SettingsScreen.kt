@@ -21,6 +21,9 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
     val isEmulatorMode by gameViewModel.isEmulatorMode.collectAsState()
     val customIpAddress by gameViewModel.customIpAddress.collectAsState()
     val versionStatus by gameViewModel.versionStatus.collectAsState()
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Obtém o escopo da coroutine para poder chamar funções suspend a partir de eventos da UI
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -44,7 +47,7 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
             OutlinedTextField(
                 value = customIpAddress,
                 onValueChange = { gameViewModel.setCustomIpAddress(it) },
-                label = { Text("Endereço Remoto (IP/ngrok)") },
+                label = { Text("Endereço Remoto (ngrok/VPN)") },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -59,9 +62,7 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                     unfocusedContainerColor = Color(0xFF303030),
                     focusedLabelColor = Color(0xFF00C853),
                     unfocusedLabelColor = Color(0xFF9E9E9E)
-                ),
-                // O campo de IP customizado desabilita o modo emulador
-                enabled = !isEmulatorMode
+                )
             )
 
             Row(
@@ -71,7 +72,7 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Usar IP do Emulador (10.0.2.2)", color = Color.Gray, fontSize = 14.sp)
+                Text("Modo Emulador (10.0.2.2)", color = Color.Gray, fontSize = 14.sp)
                 Switch(
                     checked = isEmulatorMode,
                     onCheckedChange = { gameViewModel.toggleEmulatorMode() },
@@ -81,13 +82,14 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                         uncheckedThumbColor = Color.Gray,
                         uncheckedTrackColor = Color(0xFF303030)
                     ),
-                    // O switch é desabilitado se um IP customizado estiver preenchido
                     enabled = customIpAddress.isBlank()
                 )
             }
             Spacer(Modifier.height(24.dp))
             Button(
                 onClick = {
+                    // --- CORREÇÃO APLICADA AQUI ---
+                    // Lança a coroutine para chamar a função suspend
                     scope.launch {
                         gameViewModel.checkAppVersion()
                     }
