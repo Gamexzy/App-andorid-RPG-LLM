@@ -1,5 +1,4 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/HomeScreen.kt
-package com.android.rpgllm.ui.theme
+package com.android.rpgllm.ui.screen.home
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -23,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.android.rpgllm.data.GameViewModel
+import com.android.rpgllm.navigation.AppRoutes
 
 // Rotas internas para a navegação da barra inferior
 object HomeRoutes {
@@ -35,7 +35,7 @@ object HomeRoutes {
 @Composable
 fun HomeScreen(
     gameViewModel: GameViewModel,
-    rootNavController: NavController // O controlador de navegação principal para ir para a tela de jogo
+    rootNavController: NavController // O controlador de navegação principal
 ) {
     val homeNavController = rememberNavController()
 
@@ -52,39 +52,21 @@ fun HomeScreen(
                     label = { Text("Sagas") },
                     selected = currentRoute == HomeRoutes.SESSION_LIST,
                     onClick = { homeNavController.navigate(HomeRoutes.SESSION_LIST) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF00C853),
-                        unselectedIconColor = Color.Gray,
-                        selectedTextColor = Color(0xFF00C853),
-                        unselectedTextColor = Color.Gray,
-                        indicatorColor = Color(0xFF2A2A2A)
-                    )
+                    colors = navigationBarItemColors()
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.AddCircle, contentDescription = "Criar") },
                     label = { Text("Criar") },
                     selected = currentRoute == HomeRoutes.CHARACTER_CREATION,
                     onClick = { homeNavController.navigate(HomeRoutes.CHARACTER_CREATION) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF00C853),
-                        unselectedIconColor = Color.Gray,
-                        selectedTextColor = Color(0xFF00C853),
-                        unselectedTextColor = Color.Gray,
-                        indicatorColor = Color(0xFF2A2A2A)
-                    )
+                    colors = navigationBarItemColors()
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Settings, contentDescription = "Configurações") },
                     label = { Text("Configurações") },
                     selected = currentRoute == HomeRoutes.SETTINGS,
                     onClick = { homeNavController.navigate(HomeRoutes.SETTINGS) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color(0xFF00C853),
-                        unselectedIconColor = Color.Gray,
-                        selectedTextColor = Color(0xFF00C853),
-                        unselectedTextColor = Color.Gray,
-                        indicatorColor = Color(0xFF2A2A2A)
-                    )
+                    colors = navigationBarItemColors()
                 )
             }
         }
@@ -98,8 +80,7 @@ fun HomeScreen(
                 SessionListScreen(
                     gameViewModel = gameViewModel,
                     onNavigateToGame = { sessionName ->
-                        // Usa o controlador de navegação raiz para ir para a tela de jogo
-                        rootNavController.navigate("game_screen/$sessionName")
+                        rootNavController.navigate(AppRoutes.gameScreen(sessionName))
                     }
                 )
             }
@@ -107,9 +88,7 @@ fun HomeScreen(
                 CharacterCreationScreen(
                     gameViewModel = gameViewModel,
                     onSessionCreated = { sessionName ->
-                        // Usa o controlador de navegação raiz para ir para a tela de jogo
-                        rootNavController.navigate("game_screen/$sessionName") {
-                            // Limpa a pilha de volta para a lista de sessões
+                        rootNavController.navigate(AppRoutes.gameScreen(sessionName)) {
                             popUpTo(rootNavController.graph.startDestinationId)
                         }
                     }
@@ -121,3 +100,12 @@ fun HomeScreen(
         }
     }
 }
+
+@Composable
+private fun navigationBarItemColors() = NavigationBarItemDefaults.colors(
+    selectedIconColor = Color(0xFF00C853),
+    unselectedIconColor = Color.Gray,
+    selectedTextColor = Color(0xFF00C853),
+    unselectedTextColor = Color.Gray,
+    indicatorColor = Color(0xFF2A2A2A)
+)

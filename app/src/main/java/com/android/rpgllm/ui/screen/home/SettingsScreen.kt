@@ -1,13 +1,37 @@
-package com.android.rpgllm.ui.theme
+package com.android.rpgllm.ui.screen.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.rpgllm.data.GameViewModel
@@ -40,7 +64,6 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 .background(Color(0xFF1E1E1E))
                 .padding(16.dp),
         ) {
-            // --- Seção de Conexão ---
             Text("Conexão com o Servidor", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
             Spacer(Modifier.height(8.dp))
 
@@ -49,16 +72,12 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 onValueChange = { gameViewModel.setCustomIpAddress(it) },
                 label = { Text("Endereço Remoto (ngrok/VPN)") },
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                colors = outlinedTextFieldColors()
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                colors = settingsOutlinedTextFieldColors()
             )
 
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -66,17 +85,13 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 Switch(
                     checked = isEmulatorMode,
                     onCheckedChange = { gameViewModel.toggleEmulatorMode() },
-                    colors = switchColors(),
+                    colors = settingsSwitchColors(),
                     enabled = customIpAddress.isBlank()
                 )
             }
             Spacer(Modifier.height(16.dp))
             Button(
-                onClick = {
-                    scope.launch {
-                        gameViewModel.checkAppVersion()
-                    }
-                },
+                onClick = { scope.launch { gameViewModel.checkAppVersion() } },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
             ) {
@@ -84,7 +99,6 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
             }
             Spacer(Modifier.height(16.dp))
 
-            // Indicador de Status da Conexão
             Box(modifier = Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
                 when (versionStatus) {
                     VersionStatus.CHECKING -> CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF00C853))
@@ -95,17 +109,15 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
                 }
             }
 
-            // --- Divisor e Seção da Conta ---
             HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
 
             Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
             Spacer(Modifier.height(16.dp))
 
-            // Botão de Logout
             Button(
                 onClick = { gameViewModel.logout() },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C)) // Cor de perigo
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C))
             ) {
                 Text("Sair (Logout)")
             }
@@ -115,9 +127,8 @@ fun SettingsScreen(gameViewModel: GameViewModel) {
     }
 }
 
-// Funções de estilo auxiliares
 @Composable
-private fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
+private fun settingsOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color(0xFF00C853),
     unfocusedBorderColor = Color(0xFF616161),
     cursorColor = Color(0xFF00C853),
@@ -130,7 +141,7 @@ private fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun switchColors() = SwitchDefaults.colors(
+private fun settingsSwitchColors() = SwitchDefaults.colors(
     checkedThumbColor = Color(0xFF00C853),
     checkedTrackColor = Color(0xFF335C3D),
     uncheckedThumbColor = Color.Gray,

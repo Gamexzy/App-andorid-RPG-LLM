@@ -1,5 +1,4 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/GameScreen.kt
-package com.android.rpgllm.ui.theme
+package com.android.rpgllm.ui.screen.game
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -21,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import com.android.rpgllm.data.GameViewModel
 import kotlinx.coroutines.launch
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameScreen(
@@ -31,7 +29,7 @@ fun GameScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val gameState by gameViewModel.gameState.collectAsState()
-    val toolMenuState by gameViewModel.toolMenuState.collectAsState() // NOVO
+    val toolMenuState by gameViewModel.toolMenuState.collectAsState()
 
     LaunchedEffect(key1 = sessionName) {
         gameViewModel.loadSession(sessionName)
@@ -70,7 +68,6 @@ fun GameScreen(
                 )
             }
         ) { innerPadding ->
-            // O RpgTextScreen agora recebe os estados e callbacks do menu de ferramentas
             RpgTextScreen(
                 gameState = gameState,
                 toolMenuState = toolMenuState,

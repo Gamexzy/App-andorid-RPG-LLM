@@ -1,8 +1,12 @@
-// app/src/main/java/com/android/rpgllm/ui/theme/StatusScreen.kt
-package com.android.rpgllm.ui.theme
+package com.android.rpgllm.ui.screen.status
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,15 +45,12 @@ fun StatusScreen(
             color = Color.Red
             showErrorContent = true
         }
-        VersionStatus.UP_TO_DATE -> {
-            // Este caso é tratado na MainActivity, esta tela não será mostrada.
-            // Mas precisamos definir valores padrão.
+        VersionStatus.UP_TO_DATE, VersionStatus.NONE -> {
+            // Estes casos não devem mostrar esta tela, mas definimos valores padrão.
             message = ""
             color = Color.Transparent
             showErrorContent = false
         }
-
-        VersionStatus.NONE -> TODO()
     }
 
     Box(
