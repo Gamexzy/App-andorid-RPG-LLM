@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.android.rpgllm.data.GameViewModel
-import com.android.rpgllm.navigation.AppNavigation
-import com.android.rpgllm.ui.theme.RPGLLMTheme
+import com.android.rpgllm.presetation.screens.game.GameViewModel
+import com.android.rpgllm.presetation.navigation.AppNavigation
+import com.android.rpgllm.presetation.theme.RPGLLMTheme
 
 class MainActivity : ComponentActivity() {
 
