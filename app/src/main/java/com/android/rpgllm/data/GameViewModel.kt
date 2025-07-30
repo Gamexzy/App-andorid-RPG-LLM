@@ -52,12 +52,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadConnectionSettings()
-        checkUserLoggedIn()
+        initializeUserSession() // Função de inicialização principal
     }
 
-    // --- LÓGICA DE AUTENTICAÇÃO ---
-    private fun checkUserLoggedIn() {
-        _authUiState.update { it.copy(isAuthenticated = authRepository.isLoggedIn()) }
+    // --- LÓGICA DE AUTENTICAÇÃO E SESSÃO ---
+    private fun initializeUserSession() {
+        viewModelScope.launch {
+            if (authRepository.isLoggedIn()) {
+                // Se já existe um token, apenas atualiza o estado da UI
+                _authUiState.update {
+                    it.copy(
+                        isAuthenticated = true,
+                        isAnonymous = userPrefsRepository.isUserAnonymous()
+                    )
+                }
+            } else {
+                // Se não há token, tenta logar como anônimo
+                val result = authRepository.loginAnonymously()
+                if (result is AuthResult.Success) {
+                    _authUiState.update { it.copy(isAuthenticated = true, isAnonymous = true) }
+                } else {
+                    // Falha crítica, não conseguiu nem criar sessão anônima
+                    _authUiState.update { it.copy(isAuthenticated = false) }
+                }
+            }
+        }
     }
 
     fun login(username: String, password: String) {
@@ -65,7 +84,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = authRepository.login(username, password)
             if (result is AuthResult.Success) {
-                _authUiState.update { it.copy(isLoading = false, isAuthenticated = true) }
+                _authUiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isAuthenticated = true,
+                        isAnonymous = result.isAnonymous
+                    )
+                }
             } else if (result is AuthResult.Error) {
                 _authUiState.update { it.copy(isLoading = false, errorMessage = result.message) }
             }
@@ -77,7 +102,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = authRepository.register(username, password)
             if (result is AuthResult.Success) {
-                login(username, password) // Auto-login after successful registration
+                // Faz login automaticamente após o registro bem-sucedido
+                login(username, password)
             } else if (result is AuthResult.Error) {
                 _authUiState.update { it.copy(isLoading = false, errorMessage = result.message) }
             }
@@ -86,15 +112,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         authRepository.logout()
-        _authUiState.update { AuthUiState(isAuthenticated = false) }
+        // Após o logout, volta para uma nova sessão anônima
+        initializeUserSession()
     }
 
     fun clearAuthError() {
         _authUiState.update { it.copy(errorMessage = null) }
     }
 
-
-    // --- LÓGICA DE SESSÃO E JOGO ---
+    // ... (O resto do GameViewModel permanece o mesmo)
     fun loadSession(sessionName: String) {
         currentSessionName = sessionName
         val savedHistory = userPrefsRepository.loadChatHistory(sessionName)

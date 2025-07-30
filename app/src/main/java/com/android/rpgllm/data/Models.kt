@@ -1,4 +1,3 @@
-// app/src/main/java/com/android/rpgllm/data/Models.kt
 package com.android.rpgllm.data
 
 import org.json.JSONObject
@@ -38,12 +37,9 @@ data class ToolMenuUiState(
 // --- Modelos para a Tela de Jogo ---
 
 data class GameState(
-    // Dados do Servidor
     val base: PlayerBase = PlayerBase(),
     val vitals: PlayerVitals = PlayerVitals(),
     val possessions: List<PlayerPossession> = emptyList(),
-
-    // Estado da UI
     val narrativeLines: List<String> = emptyList(),
     val isLoading: Boolean = false
 )
@@ -65,23 +61,17 @@ data class PlayerPossession(
     val profile: JSONObject = JSONObject()
 )
 
-// --- NOVOS MODELOS PARA AUTENTICAÇÃO ---
+// --- Modelos para Autenticação ---
 
-/**
- * Representa o estado da UI para as telas de autenticação.
- */
 data class AuthUiState(
-    val isAuthenticated: Boolean = false,
+    val isAuthenticated: Boolean = false, // Indica se há um token válido (seja anônimo ou real)
+    val isAnonymous: Boolean = true,      // Distingue entre conta de convidado e conta registrada
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
-/**
- * Representa o resultado de uma operação de autenticação (login/registo).
- * É uma sealed class para garantir que apenas os resultados definidos (Success, Error)
- * possam ser utilizados, tornando o código mais seguro e previsível.
- */
 sealed class AuthResult {
-    object Success : AuthResult()
+    // Retorna o tipo de usuário para o ViewModel saber como atualizar o estado
+    data class Success(val isAnonymous: Boolean) : AuthResult()
     data class Error(val message: String) : AuthResult()
 }

@@ -24,7 +24,6 @@ import androidx.navigation.compose.rememberNavController
 import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.navigation.AppRoutes
 
-// Rotas internas para a navegação da barra inferior
 object HomeRoutes {
     const val SESSION_LIST = "home_session_list"
     const val CHARACTER_CREATION = "home_character_creation"
@@ -95,7 +94,13 @@ fun HomeScreen(
                 )
             }
             composable(HomeRoutes.SETTINGS) {
-                SettingsScreen(gameViewModel = gameViewModel)
+                // --- CORREÇÃO APLICADA AQUI ---
+                // Passamos o `rootNavController` para a SettingsScreen,
+                // pois ela precisa navegar para uma rota principal (AUTH).
+                SettingsScreen(
+                    gameViewModel = gameViewModel,
+                    navController = rootNavController
+                )
             }
         }
     }
