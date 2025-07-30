@@ -51,6 +51,21 @@ class GameRepository(private val apiClient: ApiClient) {
         }
     }
 
+    // --- NOVA FUNÇÃO ---
+    // Envia uma requisição para apagar uma saga no servidor.
+    suspend fun deleteSession(sessionName: String): Result<Unit> {
+        return try {
+            val response = apiClient.makeRequest("/sessions/$sessionName", "DELETE")
+            val jsonResponse = JSONObject(response)
+            if (jsonResponse.has("error")) {
+                throw Exception(jsonResponse.getString("error"))
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun createSession(characterName: String, worldConcept: String): Result<Pair<String, String>> {
         return try {
             val payload = JSONObject().apply {

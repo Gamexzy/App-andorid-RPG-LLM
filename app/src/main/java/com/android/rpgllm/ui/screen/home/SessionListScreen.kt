@@ -1,7 +1,8 @@
 package com.android.rpgllm.ui.screen.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,18 +13,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,9 +48,25 @@ fun SessionListScreen(
     onNavigateToGame: (String) -> Unit
 ) {
     val uiState by gameViewModel.sessionListState.collectAsState()
+    // Estado para controlar qual saga está selecionada para exclusão
+    var sessionToDelete by remember { mutableStateOf<SessionInfo?>(null) }
 
     LaunchedEffect(Unit) {
         gameViewModel.fetchSessions()
+    }
+
+    // Se uma saga foi selecionada, mostra o diálogo de confirmação
+    sessionToDelete?.let { session ->
+        DeleteConfirmationDialog(
+            sessionInfo = session,
+            onConfirm = {
+                gameViewModel.deleteSession(session.session_name)
+                sessionToDelete = null // Fecha o diálogo
+            },
+            onDismiss = {
+                sessionToDelete = null // Fecha o diálogo
+            }
+        )
     }
 
     Scaffold(
@@ -89,7 +112,12 @@ fun SessionListScreen(
                         contentPadding = PaddingValues(16.dp)
                     ) {
                         items(uiState.sessions) { session ->
-                            SessionCard(session = session, onClick = { onNavigateToGame(session.session_name) })
+                            SessionCard(
+                                session = session,
+                                onClick = { onNavigateToGame(session.session_name) },
+                                // Define a saga a ser apagada ao pressionar e segurar
+                                onLongClick = { sessionToDelete = session }
+                            )
                         }
                     }
                 }
@@ -98,13 +126,22 @@ fun SessionListScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SessionCard(session: SessionInfo, onClick: () -> Unit) {
+fun SessionCard(
+    session: SessionInfo,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit // Novo callback para o clique longo
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
-            .clickable(onClick = onClick),
+            // `combinedClickable` permite ter um clique normal e um clique longo
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -124,4 +161,30 @@ fun SessionCard(session: SessionInfo, onClick: () -> Unit) {
             )
         }
     }
+}
+
+@Composable
+fun DeleteConfirmationDialog(
+    sessionInfo: SessionInfo,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Apagar Saga") },
+        text = { Text("Tem a certeza que quer apagar permanentemente a saga de '${sessionInfo.player_name}'?") },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+            ) {
+                Text("Apagar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
 }

@@ -52,14 +52,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadConnectionSettings()
-        initializeUserSession() // Função de inicialização principal
+        initializeUserSession()
     }
 
     // --- LÓGICA DE AUTENTICAÇÃO E SESSÃO ---
     private fun initializeUserSession() {
         viewModelScope.launch {
             if (authRepository.isLoggedIn()) {
-                // Se já existe um token, apenas atualiza o estado da UI
                 _authUiState.update {
                     it.copy(
                         isAuthenticated = true,
@@ -67,12 +66,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             } else {
-                // Se não há token, tenta logar como anônimo
                 val result = authRepository.loginAnonymously()
                 if (result is AuthResult.Success) {
                     _authUiState.update { it.copy(isAuthenticated = true, isAnonymous = true) }
                 } else {
-                    // Falha crítica, não conseguiu nem criar sessão anônima
                     _authUiState.update { it.copy(isAuthenticated = false) }
                 }
             }
@@ -102,7 +99,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = authRepository.register(username, password)
             if (result is AuthResult.Success) {
-                // Faz login automaticamente após o registro bem-sucedido
                 login(username, password)
             } else if (result is AuthResult.Error) {
                 _authUiState.update { it.copy(isLoading = false, errorMessage = result.message) }
@@ -112,7 +108,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         authRepository.logout()
-        // Após o logout, volta para uma nova sessão anônima
         initializeUserSession()
     }
 
@@ -120,7 +115,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _authUiState.update { it.copy(errorMessage = null) }
     }
 
-    // ... (O resto do GameViewModel permanece o mesmo)
     fun loadSession(sessionName: String) {
         currentSessionName = sessionName
         val savedHistory = userPrefsRepository.loadChatHistory(sessionName)
@@ -130,7 +124,24 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _gameState.update { GameState(narrativeLines = listOf("A carregar saga '$sessionName'...")) }
             fetchGameState(isInitialLoad = true)
         }
-        fetchGameState() // Always fetch latest state
+        fetchGameState()
+    }
+
+    // --- NOVA FUNÇÃO ---
+    fun deleteSession(sessionName: String) {
+        viewModelScope.launch {
+            gameRepository.deleteSession(sessionName)
+                .onSuccess {
+                    // Se apagou no servidor, apaga localmente também
+                    userPrefsRepository.deleteChatHistory(sessionName)
+                    // Atualiza a lista de sagas na UI
+                    fetchSessions()
+                }
+                .onFailure { error ->
+                    // Mostra um erro se não conseguir apagar
+                    _sessionListState.update { it.copy(errorMessage = "Falha ao apagar: ${error.message}") }
+                }
+        }
     }
 
     fun createNewSession(characterName: String, worldConcept: String, onSessionCreated: (String) -> Unit) {
@@ -235,8 +246,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-    // --- FUNÇÕES DE CONFIGURAÇÃO E STATUS ---
     private fun loadConnectionSettings() {
         val (address, isEmulator) = userPrefsRepository.loadConnectionSettings()
         _customIpAddress.value = address

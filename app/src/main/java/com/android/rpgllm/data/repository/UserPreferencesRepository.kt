@@ -21,16 +21,13 @@ class UserPreferencesRepository(context: Context) {
         sharedPreferences.edit().remove("JWT_TOKEN").apply()
     }
 
-    // Novas funções para gerenciar o estado anônimo
     fun setUserIsAnonymous(isAnonymous: Boolean) {
         sharedPreferences.edit().putBoolean("IS_ANONYMOUS", isAnonymous).apply()
     }
 
     fun isUserAnonymous(): Boolean {
-        // Por padrão, se não houver token, consideramos anônimo.
         return sharedPreferences.getBoolean("IS_ANONYMOUS", getToken() == null)
     }
-
 
     fun saveConnectionSettings(address: String, isEmulator: Boolean) {
         sharedPreferences.edit().apply {
@@ -63,5 +60,11 @@ class UserPreferencesRepository(context: Context) {
         } else {
             emptyList()
         }
+    }
+
+    // --- NOVA FUNÇÃO ---
+    // Remove o histórico de chat de uma saga específica do SharedPreferences.
+    fun deleteChatHistory(sessionName: String) {
+        sharedPreferences.edit().remove("CHAT_HISTORY_$sessionName").apply()
     }
 }
