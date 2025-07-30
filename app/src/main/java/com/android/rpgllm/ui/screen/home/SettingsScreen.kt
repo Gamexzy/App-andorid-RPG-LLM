@@ -9,11 +9,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.data.VersionStatus
 import com.android.rpgllm.navigation.AppRoutes
 import kotlinx.coroutines.launch
+import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -181,3 +184,21 @@ private fun settingsSwitchColors() = SwitchDefaults.colors(
     uncheckedThumbColor = Color.Gray,
     uncheckedTrackColor = Color(0xFF303030)
 )
+
+@Preview
+@Composable
+fun SettingsScreenPreview() {
+    val gameViewModel: GameViewModel = viewModel()
+    val navController = rememberNavController()
+    SettingsScreen(gameViewModel = gameViewModel, navController = navController)
+}
+
+@Preview
+@Composable
+fun ConnectionSettingsPreview() {
+    val gameViewModel: GameViewModel = viewModel()
+    MaterialTheme {
+        ConnectionSettings(gameViewModel = gameViewModel)
+    }
+}
+
