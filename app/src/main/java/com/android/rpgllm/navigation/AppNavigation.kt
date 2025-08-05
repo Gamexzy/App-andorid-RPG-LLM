@@ -8,11 +8,16 @@ import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.ui.screen.auth.AuthScreen
 import com.android.rpgllm.ui.screen.game.GameScreen
 import com.android.rpgllm.ui.screen.home.HomeScreen
+import com.android.rpgllm.ui.screen.management.CharactersScreen
+import com.android.rpgllm.ui.screen.management.UniversesScreen
 
 object AppRoutes {
     const val HOME = "home"
-    const val AUTH = "auth" // A tela de login agora é um destino normal
+    const val AUTH = "auth"
     const val GAME_SCREEN = "game_screen/{sessionName}"
+    const val CHARACTERS_SCREEN = "characters_screen"
+    const val UNIVERSES_SCREEN = "universes_screen"
+
     fun gameScreen(sessionName: String) = "game_screen/$sessionName"
 }
 
@@ -22,7 +27,7 @@ fun AppNavigation(gameViewModel: GameViewModel) {
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.HOME // O app sempre começa aqui
+        startDestination = AppRoutes.HOME
     ) {
         composable(AppRoutes.HOME) {
             HomeScreen(
@@ -35,7 +40,6 @@ fun AppNavigation(gameViewModel: GameViewModel) {
             AuthScreen(
                 gameViewModel = gameViewModel,
                 onLoginSuccess = {
-                    // Após o login, volta para a tela anterior (Configurações)
                     navController.popBackStack()
                 }
             )
@@ -47,6 +51,16 @@ fun AppNavigation(gameViewModel: GameViewModel) {
                 gameViewModel = gameViewModel,
                 sessionName = sessionName
             )
+        }
+
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Removido o parâmetro `navController` que já não é necessário.
+        composable(AppRoutes.CHARACTERS_SCREEN) {
+            CharactersScreen()
+        }
+
+        composable(AppRoutes.UNIVERSES_SCREEN) {
+            UniversesScreen()
         }
     }
 }

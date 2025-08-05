@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -16,19 +17,20 @@ import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.data.VersionStatus
 import com.android.rpgllm.navigation.AppRoutes
 import kotlinx.coroutines.launch
-import androidx.compose.ui.tooling.preview.Preview
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    modifier: Modifier = Modifier,
     gameViewModel: GameViewModel,
-    navController: NavController // Precisa do NavController para ir para a tela de Auth
+    navController: NavController
 ) {
     val authState by gameViewModel.authUiState.collectAsState()
     val versionStatus by gameViewModel.versionStatus.collectAsState()
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        modifier = modifier, // Aplica o modificador da animação
         topBar = {
             TopAppBar(
                 title = { Text("Conta e Conexão") },
@@ -46,7 +48,6 @@ fun SettingsScreen(
                 .background(Color(0xFF1E1E1E))
                 .padding(16.dp),
         ) {
-            // --- Seção da Conta ---
             Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
             Spacer(Modifier.height(16.dp))
 
@@ -79,10 +80,8 @@ fun SettingsScreen(
                 }
             }
 
-
             HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
 
-            // --- Seção de Conexão ---
             ConnectionSettings(gameViewModel = gameViewModel)
 
             Spacer(Modifier.weight(1f))
@@ -90,7 +89,6 @@ fun SettingsScreen(
     }
 }
 
-// Componente extraído para manter o código limpo
 @Composable
 private fun ConnectionSettings(gameViewModel: GameViewModel) {
     val isEmulatorMode by gameViewModel.isEmulatorMode.collectAsState()
@@ -163,7 +161,6 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
     }
 }
 
-
 @Composable
 private fun settingsOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor = Color(0xFF00C853),
@@ -192,13 +189,3 @@ fun SettingsScreenPreview() {
     val navController = rememberNavController()
     SettingsScreen(gameViewModel = gameViewModel, navController = navController)
 }
-
-@Preview
-@Composable
-fun ConnectionSettingsPreview() {
-    val gameViewModel: GameViewModel = viewModel()
-    MaterialTheme {
-        ConnectionSettings(gameViewModel = gameViewModel)
-    }
-}
-

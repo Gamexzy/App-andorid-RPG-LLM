@@ -127,27 +127,37 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         fetchGameState()
     }
 
-    // --- NOVA FUNÇÃO ---
     fun deleteSession(sessionName: String) {
         viewModelScope.launch {
             gameRepository.deleteSession(sessionName)
                 .onSuccess {
-                    // Se apagou no servidor, apaga localmente também
                     userPrefsRepository.deleteChatHistory(sessionName)
-                    // Atualiza a lista de sagas na UI
                     fetchSessions()
                 }
                 .onFailure { error ->
-                    // Mostra um erro se não conseguir apagar
                     _sessionListState.update { it.copy(errorMessage = "Falha ao apagar: ${error.message}") }
                 }
         }
     }
 
-    fun createNewSession(characterName: String, worldConcept: String, onSessionCreated: (String) -> Unit) {
+    // --- FUNÇÃO ATUALIZADA ---
+    fun createNewSession(
+        characterName: String,
+        characterClass: String,
+        characterBackstory: String,
+        worldConcept: String,
+        onSessionCreated: (String) -> Unit
+    ) {
         _creationState.update { it.copy(isLoading = true, errorMessage = null) }
+
+        // Combina as informações para enviar ao backend
+        val fullCharacterInfo = "Nome: $characterName\nClasse: $characterClass\nHistória: $characterBackstory"
+        val fullWorldInfo = "Conceito do Mundo: $worldConcept"
+
         viewModelScope.launch {
-            gameRepository.createSession(characterName, worldConcept)
+            // A API do repositório ainda espera 2 argumentos, então concatenamos a informação.
+            // O ideal no futuro seria atualizar a API para aceitar os campos separadamente.
+            gameRepository.createSession(fullCharacterInfo, fullWorldInfo)
                 .onSuccess { (newSessionName, initialNarrative) ->
                     val initialHistory = listOf(initialNarrative)
                     userPrefsRepository.saveChatHistory(newSessionName, initialHistory)
