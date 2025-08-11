@@ -27,8 +27,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _gameState = MutableStateFlow(GameState())
     val gameState: StateFlow<GameState> = _gameState.asStateFlow()
 
-    private val _sessionListState = MutableStateFlow(SessionListUiState())
-    val sessionListState: StateFlow<SessionListUiState> = _sessionListState.asStateFlow()
+    private val _adventureListState = MutableStateFlow(AdventureListUiState())
+    val adventureListState: StateFlow<AdventureListUiState> = _adventureListState.asStateFlow()
 
     private val _creationState = MutableStateFlow(CreationUiState())
     val creationState: StateFlow<CreationUiState> = _creationState.asStateFlow()
@@ -48,15 +48,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _customIpAddress = MutableStateFlow("")
     val customIpAddress: StateFlow<String> = _customIpAddress.asStateFlow()
 
-    private var currentSessionName: String? = null
+    private var currentAdventureName: String? = null
 
     init {
         loadConnectionSettings()
-        initializeUserSession()
+        initializeUserAdventure()
     }
 
     // --- LÓGICA DE AUTENTICAÇÃO E SESSÃO ---
-    private fun initializeUserSession() {
+    private fun initializeUserAdventure() {
         viewModelScope.launch {
             if (authRepository.isLoggedIn()) {
                 _authUiState.update {
@@ -108,45 +108,45 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         authRepository.logout()
-        initializeUserSession()
+        initializeUserAdventure()
     }
 
     fun clearAuthError() {
         _authUiState.update { it.copy(errorMessage = null) }
     }
 
-    fun loadSession(sessionName: String) {
-        currentSessionName = sessionName
-        val savedHistory = userPrefsRepository.loadChatHistory(sessionName)
+    fun loadAdventure(adventureName: String) {
+        currentAdventureName = adventureName
+        val savedHistory = userPrefsRepository.loadChatHistory(adventureName)
         if (savedHistory.isNotEmpty()) {
             _gameState.update { it.copy(narrativeLines = savedHistory, isLoading = false) }
         } else {
-            _gameState.update { GameState(narrativeLines = listOf("A carregar saga '$sessionName'...")) }
+            _gameState.update { GameState(narrativeLines = listOf("A carregar saga '$adventureName'...")) }
             fetchGameState(isInitialLoad = true)
         }
         fetchGameState()
     }
 
-    fun deleteSession(sessionName: String) {
+    fun deleteAdventure(adventureName: String) {
         viewModelScope.launch {
-            gameRepository.deleteSession(sessionName)
+            gameRepository.deleteAdventure(adventureName)
                 .onSuccess {
-                    userPrefsRepository.deleteChatHistory(sessionName)
-                    fetchSessions()
+                    userPrefsRepository.deleteChatHistory(adventureName)
+                    fetchAdventures()
                 }
                 .onFailure { error ->
-                    _sessionListState.update { it.copy(errorMessage = "Falha ao apagar: ${error.message}") }
+                    _adventureListState.update { it.copy(errorMessage = "Falha ao apagar: ${error.message}") }
                 }
         }
     }
 
     // --- FUNÇÃO ATUALIZADA ---
-    fun createNewSession(
+    fun createNewAdventure(
         characterName: String,
         characterClass: String,
         characterBackstory: String,
         worldConcept: String,
-        onSessionCreated: (String) -> Unit
+        onAdventureCreated: (String) -> Unit
     ) {
         _creationState.update { it.copy(isLoading = true, errorMessage = null) }
 
@@ -157,12 +157,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // A API do repositório ainda espera 2 argumentos, então concatenamos a informação.
             // O ideal no futuro seria atualizar a API para aceitar os campos separadamente.
-            gameRepository.createSession(fullCharacterInfo, fullWorldInfo)
-                .onSuccess { (newSessionName, initialNarrative) ->
+            gameRepository.createAdventure(fullCharacterInfo, fullWorldInfo)
+                .onSuccess { (newAdventureName, initialNarrative) ->
                     val initialHistory = listOf(initialNarrative)
-                    userPrefsRepository.saveChatHistory(newSessionName, initialHistory)
+                    userPrefsRepository.saveChatHistory(newAdventureName, initialHistory)
                     _gameState.value = GameState(narrativeLines = initialHistory)
-                    onSessionCreated(newSessionName)
+                    onAdventureCreated(newAdventureName)
                     _creationState.update { it.copy(isLoading = false) }
                 }
                 .onFailure { error ->
@@ -193,53 +193,53 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun sendPlayerAction(action: String, displayInLog: Boolean) {
-        val session = currentSessionName ?: return
+        val adventure = currentAdventureName ?: return
         if (action.isBlank()) return
 
         if (displayInLog) {
-            addNarrativeLine("\n\n> $action", session)
+            addNarrativeLine("\n\n> $action", adventure)
         }
         _gameState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            gameRepository.executeTurn(session, action)
+            gameRepository.executeTurn(adventure, action)
                 .onSuccess { responseNarrative ->
-                    addNarrativeLine("\n\n$responseNarrative", session)
+                    addNarrativeLine("\n\n$responseNarrative", adventure)
                 }
                 .onFailure { error ->
-                    addNarrativeLine("\n\nErro de Conexão: ${error.message}", session)
+                    addNarrativeLine("\n\nErro de Conexão: ${error.message}", adventure)
                 }
             _gameState.update { it.copy(isLoading = false) }
         }
     }
 
-    private fun addNarrativeLine(line: String, session: String) {
+    private fun addNarrativeLine(line: String, adventure: String) {
         _gameState.update {
             val newHistory = it.narrativeLines + line
-            userPrefsRepository.saveChatHistory(session, newHistory)
+            userPrefsRepository.saveChatHistory(adventure, newHistory)
             it.copy(narrativeLines = newHistory)
         }
     }
 
     private fun fetchContextualTools() {
-        val session = currentSessionName ?: return
+        val adventure = currentAdventureName ?: return
         _toolMenuState.update { it.copy(isLoading = true, isVisible = true) }
         viewModelScope.launch {
-            gameRepository.getContextualTools(session)
+            gameRepository.getContextualTools(adventure)
                 .onSuccess { tools ->
                     _toolMenuState.update { it.copy(isLoading = false, tools = tools) }
                 }
                 .onFailure { error ->
-                    addNarrativeLine("> Erro ao buscar ações: ${error.message}", session)
+                    addNarrativeLine("> Erro ao buscar ações: ${error.message}", adventure)
                     _toolMenuState.update { it.copy(isLoading = false, isVisible = false) }
                 }
         }
     }
 
     fun fetchGameState(isInitialLoad: Boolean = false) {
-        val session = currentSessionName ?: return
+        val adventure = currentAdventureName ?: return
         viewModelScope.launch {
-            gameRepository.getGameState(session)
+            gameRepository.getGameState(adventure)
                 .onSuccess { (base, vitals, possessions) ->
                     _gameState.update { currentState ->
                         val narrative = if (isInitialLoad && currentState.narrativeLines.size <= 1) {
@@ -273,15 +273,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         userPrefsRepository.saveConnectionSettings(_customIpAddress.value, newState)
     }
 
-    fun fetchSessions() {
-        _sessionListState.update { it.copy(isLoading = true, errorMessage = null) }
+    fun fetchAdventures() {
+        _adventureListState.update { it.copy(isLoading = true, errorMessage = null) }
         viewModelScope.launch {
-            gameRepository.getSessions()
-                .onSuccess { sessions ->
-                    _sessionListState.update { it.copy(sessions = sessions, isLoading = false) }
+            gameRepository.getAdventures()
+                .onSuccess { adventures ->
+                    _adventureListState.update { it.copy(adventures = adventures, isLoading = false) }
                 }
                 .onFailure { error ->
-                    _sessionListState.update { it.copy(isLoading = false, errorMessage = error.message) }
+                    _adventureListState.update { it.copy(isLoading = false, errorMessage = error.message) }
                 }
         }
     }

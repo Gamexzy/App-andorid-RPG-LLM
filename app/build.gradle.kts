@@ -57,7 +57,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
 
     // --- NOVA DEPENDÊNCIA ADICIONADA ---
-    implementation("androidx.navigation:navigation-compose:2.9.2")
+    implementation("androidx.navigation:navigation-compose:2.9.3")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -4,14 +4,14 @@ import org.json.JSONObject
 
 // --- Modelos para a Lista de Sessões e Criação ---
 
-data class SessionInfo(
-    val session_name: String,
-    val player_name: String,
-    val world_concept: String
+data class AdventureInfo(
+    val adventureName: String,
+    val playerName: String,
+    val worldConcept: String
 )
 
-data class SessionListUiState(
-    val sessions: List<SessionInfo> = emptyList(),
+data class AdventureListUiState(
+    val adventures: List<AdventureInfo> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
@@ -46,7 +46,7 @@ data class GameState(
 
 data class PlayerBase(
     val nome: String = "Aguardando...",
-    val local_nome: String = "Desconhecido"
+    val localNome: String = "Desconhecido"
 )
 
 data class PlayerVitals(

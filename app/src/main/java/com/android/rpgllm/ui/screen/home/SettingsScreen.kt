@@ -29,63 +29,49 @@ fun SettingsScreen(
     val versionStatus by gameViewModel.versionStatus.collectAsState()
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        modifier = modifier, // Aplica o modificador da animação
-        topBar = {
-            TopAppBar(
-                title = { Text("Conta e Conexão") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212),
-                    titleContentColor = Color.White
-                )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF1E1E1E))
+            .padding(16.dp),
+    ) {
+        Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+        Spacer(Modifier.height(16.dp))
+
+        if (authState.isAnonymous) {
+            Text(
+                "Você está jogando como convidado. Suas sagas são salvas apenas neste dispositivo.",
+                color = Color.Gray,
+                fontSize = 14.sp
             )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFF1E1E1E))
-                .padding(16.dp),
-        ) {
-            Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
-            Spacer(Modifier.height(16.dp))
-
-            if (authState.isAnonymous) {
-                Text(
-                    "Você está jogando como convidado. Suas sagas são salvas apenas neste dispositivo.",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { navController.navigate(AppRoutes.AUTH) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Entrar ou Criar Conta")
-                }
-            } else {
-                Text(
-                    "Você está logado. Suas sagas estão sincronizadas na nuvem.",
-                    color = Color(0xFF00C853),
-                    fontSize = 14.sp
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = { gameViewModel.logout() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C))
-                ) {
-                    Text("Sair (Logout)")
-                }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { navController.navigate(AppRoutes.AUTH) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Entrar ou Criar Conta")
             }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
-
-            ConnectionSettings(gameViewModel = gameViewModel)
-
-            Spacer(Modifier.weight(1f))
+        } else {
+            Text(
+                "Você está logado. Suas sagas estão sincronizadas na nuvem.",
+                color = Color(0xFF00C853),
+                fontSize = 14.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { gameViewModel.logout() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C))
+            ) {
+                Text("Sair (Logout)")
+            }
         }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
+
+        ConnectionSettings(gameViewModel = gameViewModel)
+
+        Spacer(Modifier.weight(1f))
     }
 }
 

@@ -5,7 +5,7 @@ import com.android.rpgllm.data.GameTool
 import com.android.rpgllm.data.PlayerBase
 import com.android.rpgllm.data.PlayerPossession
 import com.android.rpgllm.data.PlayerVitals
-import com.android.rpgllm.data.SessionInfo
+import com.android.rpgllm.data.AdventureInfo
 import com.android.rpgllm.data.network.ApiClient
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,18 +30,18 @@ class GameRepository(private val apiClient: ApiClient) {
         }
     }
 
-    suspend fun getSessions(): Result<List<SessionInfo>> {
+    suspend fun getAdventures(): Result<List<AdventureInfo>> {
         return try {
-            val response = apiClient.makeRequest("/sessions", "GET")
+            val response = apiClient.makeRequest("/adventures", "GET")
             val jsonArray = JSONArray(response)
-            val list = mutableListOf<SessionInfo>()
+            val list = mutableListOf<AdventureInfo>()
             for (i in 0 until jsonArray.length()) {
                 val jsonObject = jsonArray.getJSONObject(i)
                 list.add(
-                    SessionInfo(
-                        session_name = jsonObject.getString("session_name"),
-                        player_name = jsonObject.getString("player_name"),
-                        world_concept = jsonObject.getString("world_concept")
+                    AdventureInfo(
+                        adventureName = jsonObject.getString("adventure_name"),
+                        playerName = jsonObject.getString("player_name"),
+                        worldConcept = jsonObject.getString("world_concept")
                     )
                 )
             }
@@ -53,9 +53,9 @@ class GameRepository(private val apiClient: ApiClient) {
 
     // --- NOVA FUNÇÃO ---
     // Envia uma requisição para apagar uma saga no servidor.
-    suspend fun deleteSession(sessionName: String): Result<Unit> {
+    suspend fun deleteAdventure(adventureName: String): Result<Unit> {
         return try {
-            val response = apiClient.makeRequest("/sessions/$sessionName", "DELETE")
+            val response = apiClient.makeRequest("/Adventures/$adventureName", "DELETE")
             val jsonResponse = JSONObject(response)
             if (jsonResponse.has("error")) {
                 throw Exception(jsonResponse.getString("error"))
@@ -66,29 +66,29 @@ class GameRepository(private val apiClient: ApiClient) {
         }
     }
 
-    suspend fun createSession(characterName: String, worldConcept: String): Result<Pair<String, String>> {
+    suspend fun createAdventure(characterName: String, worldConcept: String): Result<Pair<String, String>> {
         return try {
             val payload = JSONObject().apply {
                 put("character_name", characterName)
                 put("world_concept", worldConcept)
             }
-            val response = apiClient.makeRequest("/sessions/create", "POST", payload.toString())
+            val response = apiClient.makeRequest("/adventures/create", "POST", payload.toString())
             val jsonResponse = JSONObject(response)
             if (jsonResponse.has("error")) {
                 throw Exception(jsonResponse.getString("error"))
             }
-            val newSessionName = jsonResponse.getString("session_name")
+            val newAdventureName = jsonResponse.getString("adventure_name")
             val initialNarrative = jsonResponse.getString("initial_narrative")
-            Result.success(Pair(newSessionName, initialNarrative))
+            Result.success(Pair(newAdventureName, initialNarrative))
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun executeTurn(sessionName: String, action: String): Result<String> {
+    suspend fun executeTurn(adventureName: String, action: String): Result<String> {
         return try {
             val payload = JSONObject().apply { put("player_action", action) }
-            val response = apiClient.makeRequest("/sessions/$sessionName/execute_turn", "POST", payload.toString())
+            val response = apiClient.makeRequest("/adventures/$adventureName/execute_turn", "POST", payload.toString())
             val narrative = JSONObject(response).optString("narrative", "Erro: 'narrative' não encontrada.")
             Result.success(narrative)
         } catch (e: Exception) {
@@ -96,9 +96,9 @@ class GameRepository(private val apiClient: ApiClient) {
         }
     }
 
-    suspend fun getContextualTools(sessionName: String): Result<List<GameTool>> {
+    suspend fun getContextualTools(adventureName: String): Result<List<GameTool>> {
         return try {
-            val response = apiClient.makeRequest("/sessions/$sessionName/tools", "GET")
+            val response = apiClient.makeRequest("/adventures/$adventureName/tools", "GET")
             val jsonArray = JSONArray(response)
             val tools = mutableListOf<GameTool>()
             for (i in 0 until jsonArray.length()) {
@@ -111,15 +111,15 @@ class GameRepository(private val apiClient: ApiClient) {
         }
     }
 
-    suspend fun getGameState(sessionName: String): Result<Triple<PlayerBase, PlayerVitals, List<PlayerPossession>>> {
+    suspend fun getGameState(adventureName: String): Result<Triple<PlayerBase, PlayerVitals, List<PlayerPossession>>> {
         return try {
-            val response = apiClient.makeRequest("/sessions/$sessionName/state", "GET")
+            val response = apiClient.makeRequest("/adventures/$adventureName/state", "GET")
             val json = JSONObject(response)
 
             val baseJson = json.optJSONObject("base") ?: JSONObject()
             val playerBase = PlayerBase(
                 nome = baseJson.optString("nome", "N/A"),
-                local_nome = baseJson.optString("local_nome", "N/A")
+                localNome = baseJson.optString("local_nome", "N/A")
             )
 
             val vitalsJson = json.optJSONObject("vitals") ?: JSONObject()

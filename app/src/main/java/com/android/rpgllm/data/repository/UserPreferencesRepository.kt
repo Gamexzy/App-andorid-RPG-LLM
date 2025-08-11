@@ -43,13 +43,13 @@ class UserPreferencesRepository(context: Context) {
         return Pair(address, isEmulator)
     }
 
-    fun saveChatHistory(sessionName: String, history: List<String>) {
+    fun saveChatHistory(adventureName: String, history: List<String>) {
         val jsonArray = JSONArray(history)
-        sharedPreferences.edit().putString("CHAT_HISTORY_$sessionName", jsonArray.toString()).apply()
+        sharedPreferences.edit().putString("CHAT_HISTORY_$adventureName", jsonArray.toString()).apply()
     }
 
-    fun loadChatHistory(sessionName: String): List<String> {
-        val jsonString = sharedPreferences.getString("CHAT_HISTORY_$sessionName", null)
+    fun loadChatHistory(adventureName: String): List<String> {
+        val jsonString = sharedPreferences.getString("CHAT_HISTORY_$adventureName", null)
         return if (jsonString != null) {
             try {
                 val jsonArray = JSONArray(jsonString)
@@ -64,7 +64,7 @@ class UserPreferencesRepository(context: Context) {
 
     // --- NOVA FUNÇÃO ---
     // Remove o histórico de chat de uma saga específica do SharedPreferences.
-    fun deleteChatHistory(sessionName: String) {
-        sharedPreferences.edit().remove("CHAT_HISTORY_$sessionName").apply()
+    fun deleteChatHistory(adventureName: String) {
+        sharedPreferences.edit().remove("CHAT_HISTORY_$adventureName").apply()
     }
 }

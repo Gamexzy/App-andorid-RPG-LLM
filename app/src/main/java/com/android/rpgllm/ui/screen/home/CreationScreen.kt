@@ -9,12 +9,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -34,7 +31,7 @@ import com.android.rpgllm.data.VersionStatus
 fun CreationScreen(
     modifier: Modifier = Modifier,
     gameViewModel: GameViewModel,
-    onSessionCreated: (String) -> Unit
+    onAdventureCreated: (String) -> Unit
 ) {
     var characterName by remember { mutableStateOf("") }
     var characterClass by remember { mutableStateOf("") }
@@ -51,94 +48,80 @@ fun CreationScreen(
         gameViewModel.checkAppVersion()
     }
 
-    Scaffold(
-        modifier = modifier, // Aplica o modificador da animação
-        topBar = {
-            TopAppBar(
-                title = { Text("Criar") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212),
-                    titleContentColor = Color.White
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+    ) {
+        TabRow(
+            selectedTabIndex = tabIndex,
+            containerColor = Color(0xFF1F1F1F),
+            contentColor = Color(0xFF00C853)
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    text = { Text(title) },
+                    selected = tabIndex == index,
+                    onClick = { tabIndex = index }
                 )
-            )
+            }
         }
-    ) { paddingValues ->
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+                .fillMaxWidth()
+                .padding(16.dp)
+                .weight(1f)
         ) {
-            TabRow(
-                selectedTabIndex = tabIndex,
-                containerColor = Color(0xFF1F1F1F),
-                contentColor = Color(0xFF00C853)
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        text = { Text(title) },
-                        selected = tabIndex == index,
-                        onClick = { tabIndex = index }
-                    )
-                }
+            when (tabIndex) {
+                0 -> CharacterTab(
+                    characterName = characterName,
+                    onCharacterNameChange = { characterName = it },
+                    characterClass = characterClass,
+                    onCharacterClassChange = { characterClass = it },
+                    characterBackstory = characterBackstory,
+                    onCharacterBackstoryChange = { characterBackstory = it }
+                )
+                1 -> UniverseTab(
+                    worldConcept = worldConcept,
+                    onWorldConceptChange = { worldConcept = it }
+                )
             }
+        }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .weight(1f)
-            ) {
-                when (tabIndex) {
-                    0 -> CharacterTab(
-                        characterName = characterName,
-                        onCharacterNameChange = { characterName = it },
-                        characterClass = characterClass,
-                        onCharacterClassChange = { characterClass = it },
-                        characterBackstory = characterBackstory,
-                        onCharacterBackstoryChange = { characterBackstory = it }
-                    )
-                    1 -> UniverseTab(
-                        worldConcept = worldConcept,
-                        onWorldConceptChange = { worldConcept = it }
-                    )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (uiState.isLoading || versionStatus == VersionStatus.CHECKING) {
+                CircularProgressIndicator(color = Color(0xFF00C853))
+            } else if (versionStatus != VersionStatus.UP_TO_DATE) {
+                Text(
+                    "Não é possível criar uma saga. Verifique a conexão com o servidor na aba 'Configurações'.",
+                    color = Color.Red,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            } else {
+                uiState.errorMessage?.let {
+                    Text(it, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
                 }
-            }
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (uiState.isLoading || versionStatus == VersionStatus.CHECKING) {
-                    CircularProgressIndicator(color = Color(0xFF00C853))
-                } else if (versionStatus != VersionStatus.UP_TO_DATE) {
-                    Text(
-                        "Não é possível criar uma saga. Verifique a conexão com o servidor na aba 'Configurações'.",
-                        color = Color.Red,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                } else {
-                    uiState.errorMessage?.let {
-                        Text(it, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
-                    }
-                    Button(
-                        onClick = {
-                            gameViewModel.createNewSession(
-                                characterName = characterName,
-                                characterClass = characterClass,
-                                characterBackstory = characterBackstory,
-                                worldConcept = worldConcept,
-                                onSessionCreated = onSessionCreated
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        enabled = characterName.isNotBlank() && worldConcept.isNotBlank()
-                    ) {
-                        Text("Iniciar Aventura")
-                    }
+                Button(
+                    onClick = {
+                        gameViewModel.createNewAdventure(
+                            characterName = characterName,
+                            characterClass = characterClass,
+                            characterBackstory = characterBackstory,
+                            worldConcept = worldConcept,
+                            onAdventureCreated = onAdventureCreated
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    enabled = characterName.isNotBlank() && worldConcept.isNotBlank()
+                ) {
+                    Text("Iniciar Aventura")
                 }
             }
         }

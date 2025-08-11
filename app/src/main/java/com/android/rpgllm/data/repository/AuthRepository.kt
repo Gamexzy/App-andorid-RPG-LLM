@@ -39,8 +39,8 @@ class AuthRepository(
             val jsonResponse = JSONObject(response)
 
             if (!jsonResponse.has("error")) {
-                val token = jsonResponse.optString("token", null)
-                if (token != null) {
+                val token = jsonResponse.optString("token", "")
+                if (token.isNotEmpty()) {
                     prefsRepository.saveToken(token)
                     prefsRepository.setUserIsAnonymous(true) // Marca como anônimo
                 }
@@ -63,8 +63,8 @@ class AuthRepository(
             val jsonResponse = JSONObject(response)
 
             if (!jsonResponse.has("error")) {
-                val token = jsonResponse.optString("token", null)
-                if (token != null) {
+                val token = jsonResponse.optString("token", "")
+                if (token.isNotEmpty()) {
                     prefsRepository.saveToken(token)
                 }
                 AuthResult.Success(isAnonymous = false)

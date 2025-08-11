@@ -1,6 +1,5 @@
 package com.android.rpgllm.ui.screen.home
 
-import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -20,40 +19,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.rpgllm.data.GameViewModel
-import com.android.rpgllm.data.SessionInfo
+import com.android.rpgllm.data.AdventureInfo
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdventuresScreen(
     modifier: Modifier = Modifier,
     gameViewModel: GameViewModel,
-    onNavigateToGame: (String) -> Unit,
-    onOpenMenu: () -> Unit
+    onNavigateToGame: (String) -> Unit
 ) {
-    Scaffold(
+    AdventureListContent(
         modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text("Aventuras") },
-                navigationIcon = {
-                    IconButton(onClick = onOpenMenu) {
-                        Icon(Icons.Default.Menu, contentDescription = "Abrir Menu")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        }
-    ) { paddingValues ->
-        AdventureListContent(
-            modifier = Modifier.padding(paddingValues),
-            gameViewModel = gameViewModel,
-            onNavigateToGame = onNavigateToGame
-        )
-    }
+        gameViewModel = gameViewModel,
+        onNavigateToGame = onNavigateToGame
+    )
 }
 
 @Composable
@@ -62,25 +40,25 @@ private fun AdventureListContent(
     gameViewModel: GameViewModel,
     onNavigateToGame: (String) -> Unit
 ) {
-    val uiState by gameViewModel.sessionListState.collectAsState()
+    val uiState by gameViewModel.adventureListState.collectAsState()
     val authState by gameViewModel.authUiState.collectAsState() // Observa o estado de autenticação
-    var contextMenuSession by remember { mutableStateOf<SessionInfo?>(null) }
-    var showDeleteDialogFor by remember { mutableStateOf<SessionInfo?>(null) }
+    var contextMenuAdventure by remember { mutableStateOf<AdventureInfo?>(null) }
+    var showDeleteDialogFor by remember { mutableStateOf<AdventureInfo?>(null) }
 
     // --- OTIMIZAÇÃO APLICADA AQUI ---
     // O efeito agora é acionado pelo estado de autenticação.
     // A busca por sessões só acontece DEPOIS que o login for confirmado.
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
-            gameViewModel.fetchSessions()
+            gameViewModel.fetchAdventures()
         }
     }
 
-    showDeleteDialogFor?.let { session ->
+    showDeleteDialogFor?.let { adventure ->
         DeleteConfirmationDialog(
-            sessionInfo = session,
+            adventureInfo = adventure,
             onConfirm = {
-                gameViewModel.deleteSession(session.session_name)
+                gameViewModel.deleteAdventure(adventure.adventureName)
                 showDeleteDialogFor = null
             },
             onDismiss = {
@@ -104,7 +82,7 @@ private fun AdventureListContent(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(16.dp)
             )
-            uiState.sessions.isEmpty() && !uiState.isLoading -> Text(
+            uiState.adventures.isEmpty() && !uiState.isLoading -> Text(
                 "Nenhuma aventura encontrada.\nUse o separador 'Criar' para começar uma nova!",
                 color = Color.Gray,
                 textAlign = TextAlign.Center
@@ -114,18 +92,18 @@ private fun AdventureListContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    items(uiState.sessions) { session ->
-                        SessionCard(
-                            session = session,
-                            onClick = { onNavigateToGame(session.session_name) },
-                            onLongClick = { contextMenuSession = session },
+                    items(uiState.adventures) { adventure ->
+                        AdventureCard(
+                            adventure = adventure,
+                            onClick = { onNavigateToGame(adventure.adventureName) },
+                            onLongClick = { contextMenuAdventure = adventure },
                             contextMenu = {
                                 AdventureContextMenu(
-                                    expanded = contextMenuSession == session,
-                                    onDismiss = { contextMenuSession = null },
+                                    expanded = contextMenuAdventure == adventure,
+                                    onDismiss = { contextMenuAdventure = null },
                                     onDeleteClick = {
-                                        showDeleteDialogFor = session
-                                        contextMenuSession = null
+                                        showDeleteDialogFor = adventure
+                                        contextMenuAdventure = null
                                     }
                                 )
                             }
@@ -140,8 +118,8 @@ private fun AdventureListContent(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun SessionCard(
-    session: SessionInfo,
+fun AdventureCard(
+    adventure: AdventureInfo,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     contextMenu: @Composable () -> Unit
@@ -160,14 +138,14 @@ fun SessionCard(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = session.player_name,
+                    text = adventure.playerName,
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = session.world_concept,
+                    text = adventure.worldConcept,
                     color = Color.Gray,
                     fontSize = 14.sp,
                     maxLines = 2
@@ -205,14 +183,14 @@ fun AdventureContextMenu(
 
 @Composable
 fun DeleteConfirmationDialog(
-    sessionInfo: SessionInfo,
+    adventureInfo: AdventureInfo,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Excluir Aventura") },
-        text = { Text("Tem a certeza que quer excluir permanentemente a aventura de '${sessionInfo.player_name}'? Esta ação não pode ser desfeita.") },
+        text = { Text("Tem a certeza que quer excluir permanentemente a aventura de '${adventureInfo.playerName}'? Esta ação não pode ser desfeita.") },
         confirmButton = {
             TextButton(
                 onClick = onConfirm,

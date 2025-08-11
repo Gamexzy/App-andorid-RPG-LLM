@@ -24,15 +24,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun GameScreen(
     gameViewModel: GameViewModel,
-    sessionName: String
+    adventureName: String
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val gameState by gameViewModel.gameState.collectAsState()
     val toolMenuState by gameViewModel.toolMenuState.collectAsState()
 
-    LaunchedEffect(key1 = sessionName) {
-        gameViewModel.loadSession(sessionName)
+    LaunchedEffect(key1 = adventureName) {
+        gameViewModel.loadAdventure(adventureName)
     }
 
     LaunchedEffect(drawerState.isOpen) {

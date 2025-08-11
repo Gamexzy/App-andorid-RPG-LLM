@@ -14,11 +14,11 @@ import com.android.rpgllm.ui.screen.management.UniversesScreen
 object AppRoutes {
     const val HOME = "home"
     const val AUTH = "auth"
-    const val GAME_SCREEN = "game_screen/{sessionName}"
+    const val GAME_SCREEN = "game_screen/{adventureName}"
     const val CHARACTERS_SCREEN = "characters_screen"
     const val UNIVERSES_SCREEN = "universes_screen"
 
-    fun gameScreen(sessionName: String) = "game_screen/$sessionName"
+    fun gameScreen(adventureName: String) = "game_screen/$adventureName"
 }
 
 @Composable
@@ -46,10 +46,10 @@ fun AppNavigation(gameViewModel: GameViewModel) {
         }
 
         composable(AppRoutes.GAME_SCREEN) { backStackEntry ->
-            val sessionName = backStackEntry.arguments?.getString("sessionName") ?: "error_session"
+            val adventureName = backStackEntry.arguments?.getString("adventureName") ?: "error_adventure"
             GameScreen(
                 gameViewModel = gameViewModel,
-                sessionName = sessionName
+                adventureName = adventureName
             )
         }
 

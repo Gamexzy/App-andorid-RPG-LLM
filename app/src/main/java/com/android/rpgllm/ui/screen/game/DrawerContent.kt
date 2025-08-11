@@ -49,7 +49,7 @@ fun DrawerContent(
             }
             item {
                 SectionTitle("Ficha do Personagem")
-                InfoRow(label = "Localização:", value = gameState.base.local_nome)
+                InfoRow(label = "Localização:", value = gameState.base.localNome)
                 InfoRow(label = "Fome:", value = gameState.vitals.fome)
                 InfoRow(label = "Sede:", value = gameState.vitals.sede)
                 InfoRow(label = "Cansaço:", value = gameState.vitals.cansaco)
