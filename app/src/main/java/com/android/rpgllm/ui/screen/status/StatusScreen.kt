@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,21 +33,20 @@ fun StatusScreen(
     when (status) {
         VersionStatus.CHECKING -> {
             message = "Verificando versão..."
-            color = Color.White
+            color = MaterialTheme.colorScheme.onBackground
             showErrorContent = false
         }
         VersionStatus.OUTDATED -> {
             message = "Atualização Necessária!\n\nPor favor, atualize o aplicativo para a versão mais recente para continuar jogando."
-            color = Color.Yellow
+            color = Color.Yellow // Mantido para dar destaque
             showErrorContent = false
         }
         VersionStatus.ERROR -> {
             message = "Erro de conexão.\nVerifique o servidor e a rede."
-            color = Color.Red
+            color = MaterialTheme.colorScheme.error
             showErrorContent = true
         }
         VersionStatus.UP_TO_DATE, VersionStatus.NONE -> {
-            // Estes casos não devem mostrar esta tela, mas definimos valores padrão.
             message = ""
             color = Color.Transparent
             showErrorContent = false
@@ -56,7 +56,7 @@ fun StatusScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF121212)),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -64,7 +64,7 @@ fun StatusScreen(
             modifier = Modifier.padding(32.dp)
         ) {
             if (status == VersionStatus.CHECKING) {
-                CircularProgressIndicator(color = Color(0xFF00C853))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(24.dp))
             }
 
@@ -80,7 +80,7 @@ fun StatusScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = onRetry,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Tentar Novamente")
                 }

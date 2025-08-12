@@ -32,16 +32,16 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF1E1E1E))
+            .background(MaterialTheme.colorScheme.surface) // PARTE MODIFICADA
             .padding(16.dp),
     ) {
-        Text("Conta", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+        Text("Conta", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
         Spacer(Modifier.height(16.dp))
 
         if (authState.isAnonymous) {
             Text(
                 "Você está jogando como convidado. Suas sagas são salvas apenas neste dispositivo.",
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), // PARTE MODIFICADA
                 fontSize = 14.sp
             )
             Spacer(Modifier.height(8.dp))
@@ -54,20 +54,20 @@ fun SettingsScreen(
         } else {
             Text(
                 "Você está logado. Suas sagas estão sincronizadas na nuvem.",
-                color = Color(0xFF00C853),
+                color = MaterialTheme.colorScheme.primary, // PARTE MODIFICADA
                 fontSize = 14.sp
             )
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = { gameViewModel.logout() },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB71C1C))
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) // PARTE MODIFICADA
             ) {
                 Text("Sair (Logout)")
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = Color(0xFF333333))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
         ConnectionSettings(gameViewModel = gameViewModel)
 
@@ -83,7 +83,7 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
     val scope = rememberCoroutineScope()
 
     Column {
-        Text("Conexão com o Servidor", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+        Text("Conexão com o Servidor", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
         Spacer(Modifier.height(8.dp))
 
         OutlinedTextField(
@@ -104,7 +104,7 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Modo Emulador (10.0.2.2)", color = Color.Gray, fontSize = 14.sp)
+            Text("Modo Emulador (10.0.2.2)", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
             Switch(
                 checked = isEmulatorMode,
                 onCheckedChange = { gameViewModel.toggleEmulatorMode() },
@@ -116,7 +116,7 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
         Button(
             onClick = { scope.launch { gameViewModel.checkAppVersion() } },
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF333333))
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant) // PARTE MODIFICADA
         ) {
             Text("Verificar Conexão")
         }
@@ -130,17 +130,17 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
             when (versionStatus) {
                 VersionStatus.CHECKING -> CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    color = Color(0xFF00C853)
+                    color = MaterialTheme.colorScheme.primary // MODIFICADO
                 )
                 VersionStatus.UP_TO_DATE -> Text(
                     "Conectado! Versão compatível.",
-                    color = Color(0xFF00C853)
+                    color = MaterialTheme.colorScheme.primary // MODIFICADO
                 )
-                VersionStatus.OUTDATED -> Text("Atualização Necessária!", color = Color.Yellow)
-                VersionStatus.ERROR -> Text("Erro de Conexão.", color = Color.Red)
+                VersionStatus.OUTDATED -> Text("Atualização Necessária!", color = Color.Yellow) // Mantido Amarelo para destaque
+                VersionStatus.ERROR -> Text("Erro de Conexão.", color = MaterialTheme.colorScheme.error) // MODIFICADO
                 VersionStatus.NONE -> Text(
                     "Verifique a conexão com o servidor.",
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) // MODIFICADO
                 )
             }
         }
@@ -149,23 +149,23 @@ private fun ConnectionSettings(gameViewModel: GameViewModel) {
 
 @Composable
 private fun settingsOutlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color(0xFF00C853),
-    unfocusedBorderColor = Color(0xFF616161),
-    cursorColor = Color(0xFF00C853),
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedContainerColor = Color(0xFF303030),
-    unfocusedContainerColor = Color(0xFF303030),
-    focusedLabelColor = Color(0xFF00C853),
-    unfocusedLabelColor = Color(0xFF9E9E9E)
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 )
 
 @Composable
 private fun settingsSwitchColors() = SwitchDefaults.colors(
-    checkedThumbColor = Color(0xFF00C853),
-    checkedTrackColor = Color(0xFF335C3D),
-    uncheckedThumbColor = Color.Gray,
-    uncheckedTrackColor = Color(0xFF303030)
+    checkedThumbColor = MaterialTheme.colorScheme.primary,
+    checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
 )
 
 @Preview

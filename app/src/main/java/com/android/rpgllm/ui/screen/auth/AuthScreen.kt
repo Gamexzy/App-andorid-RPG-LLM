@@ -60,9 +60,10 @@ fun AuthScreen(
         topBar = {
             TopAppBar(
                 title = { Text(if (isRegisterMode) "Criar Conta" else "Login") },
+                // PARTE MODIFICADA
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212),
-                    titleContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -71,7 +72,8 @@ fun AuthScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFF1E1E1E))
+                // PARTE MODIFICADA
+                .background(MaterialTheme.colorScheme.surface)
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -79,8 +81,9 @@ fun AuthScreen(
 
             Text(
                 text = "Universo Emergente",
-                style = Typography.headlineMedium,
-                color = Color.White,
+                // PARTE MODIFICADA
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 48.dp)
             )
 
@@ -90,6 +93,7 @@ fun AuthScreen(
                 label = { Text("Nome de Usuário") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                // PARTE MODIFICADA
                 colors = outlinedTextFieldColors()
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -101,12 +105,14 @@ fun AuthScreen(
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                // PARTE MODIFICADA
                 colors = outlinedTextFieldColors()
             )
             Spacer(modifier = Modifier.height(24.dp))
 
             if (authState.isLoading) {
-                CircularProgressIndicator(color = Color(0xFF00C853))
+                // PARTE MODIFICADA
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             } else {
                 Button(
                     onClick = {
@@ -119,7 +125,8 @@ fun AuthScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                    // PARTE MODIFICADA
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled = username.isNotBlank() && password.isNotBlank()
                 ) {
                     Text(if (isRegisterMode) "Registrar" else "Entrar")
@@ -144,22 +151,22 @@ fun AuthScreen(
             ) {
                 Text(
                     text = if (isRegisterMode) "Já tem uma conta? Faça login" else "Não tem uma conta? Registre-se",
-                    color = Color.Gray
+                    // PARTE MODIFICADA
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
             }
         }
     }
 }
-
 @Composable
 private fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Color(0xFF00C853),
-    unfocusedBorderColor = Color(0xFF616161),
-    cursorColor = Color(0xFF00C853),
-    focusedTextColor = Color.White,
-    unfocusedTextColor = Color.White,
-    focusedContainerColor = Color(0xFF303030),
-    unfocusedContainerColor = Color(0xFF303030),
-    focusedLabelColor = Color(0xFF00C853),
-    unfocusedLabelColor = Color(0xFF9E9E9E)
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 )

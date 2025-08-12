@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
@@ -24,15 +25,21 @@ fun AdventuresDrawerContent(
     navController: NavController,
     onCloseDrawer: () -> Unit
 ) {
-    ModalDrawerSheet(modifier = Modifier.fillMaxWidth(0.7f)) {
+    // PARTE MODIFICADA: Adicionado cor de fundo e conteúdo
+    ModalDrawerSheet(
+        modifier = Modifier.fillMaxWidth(0.7f),
+        drawerContainerColor = MaterialTheme.colorScheme.surface,
+        drawerContentColor = MaterialTheme.colorScheme.onSurface
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 "Gerenciamento",
-                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
-        HorizontalDivider()
+        // PARTE MODIFICADA
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 
         // Item para Aventuras - Apenas fecha a gaveta
         NavigationDrawerItem(

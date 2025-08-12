@@ -33,8 +33,9 @@ import com.android.rpgllm.data.PlayerPossession
 fun DrawerContent(
     gameState: GameState
 ) {
+    // PARTE MODIFICADA
     ModalDrawerSheet(
-        modifier = Modifier.background(Color(0xFF1E1E1E))
+        drawerContainerColor = MaterialTheme.colorScheme.surface
     ) {
         LazyColumn(modifier = Modifier.padding(16.dp)) {
             item {
@@ -42,9 +43,15 @@ fun DrawerContent(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 24.dp)
                 ) {
-                    Icon(Icons.Default.Face, "Ícone", Modifier.size(48.dp), tint = Color(0xFF00C853))
+                    // PARTE MODIFICADA
+                    Icon(Icons.Default.Face, "Ícone", Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(gameState.base.nome, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        gameState.base.nome,
+                        // PARTE MODIFICADA
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleLarge
+                    )
                 }
             }
             item {
@@ -58,7 +65,8 @@ fun DrawerContent(
             }
             item { SectionTitle("Inventário") }
             if (gameState.possessions.isEmpty()) {
-                item { Text("Vazio", color = Color.Gray, modifier = Modifier.padding(8.dp)) }
+                // PARTE MODIFICADA
+                item { Text("Vazio", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), modifier = Modifier.padding(8.dp)) }
             } else {
                 items(gameState.possessions) { p -> InventoryItemRow(item = p) }
             }
@@ -71,10 +79,12 @@ fun SectionTitle(title: String) {
     Text(
         title,
         style = MaterialTheme.typography.titleMedium,
-        color = Color(0xFF00C853),
+        // PARTE MODIFICADA
+        color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(bottom = 8.dp)
     )
-    HorizontalDivider(color = Color(0xFF333333))
+    // PARTE MODIFICADA
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
 }
 
 @Composable
@@ -85,8 +95,9 @@ fun InfoRow(label: String, value: String) {
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, color = Color.Gray, fontSize = 14.sp)
-        Text(text = value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        // PARTE MODIFICADA
+        Text(text = label, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f), fontSize = 14.sp)
+        Text(text = value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -101,10 +112,12 @@ fun InventoryItemRow(item: PlayerPossession) {
         Icon(
             imageVector = Icons.Default.Star,
             contentDescription = "Ícone do item",
-            tint = Color.Gray,
+            // PARTE MODIFICADA
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = item.itemName, color = Color.White, fontSize = 14.sp)
+        // PARTE MODIFICADA
+        Text(text = item.itemName, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
     }
 }

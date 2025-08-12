@@ -1,4 +1,4 @@
-package com.android.rpgllm.ui.screen.management
+package com.android.rpgllm.ui.screen.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,7 +10,6 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import com.android.rpgllm.navigation.AppRoutes
 
@@ -32,9 +31,9 @@ fun MenuScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF121212),
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
         }
@@ -43,7 +42,8 @@ fun MenuScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .background(Color(0xFF1E1E1E))
+                // PARTE MODIFICADA
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             NavigationDrawerItem(
                 label = { Text("Aventuras") },

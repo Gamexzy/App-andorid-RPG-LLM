@@ -7,16 +7,27 @@ import androidx.navigation.compose.rememberNavController
 import com.android.rpgllm.data.GameViewModel
 import com.android.rpgllm.ui.screen.auth.AuthScreen
 import com.android.rpgllm.ui.screen.game.GameScreen
+import com.android.rpgllm.ui.screen.home.AdventureCreationScreen
+import com.android.rpgllm.ui.screen.home.CharacterCreationScreen
 import com.android.rpgllm.ui.screen.home.HomeScreen
-import com.android.rpgllm.ui.screen.management.CharactersScreen
-import com.android.rpgllm.ui.screen.management.UniversesScreen
+import com.android.rpgllm.ui.screen.home.UniverseCreationScreen
+import com.android.rpgllm.ui.screen.home.CharactersScreen
+import com.android.rpgllm.ui.screen.home.UniversesScreen
 
 object AppRoutes {
     const val HOME = "home"
     const val AUTH = "auth"
     const val GAME_SCREEN = "game_screen/{adventureName}"
+
+    // Rotas de gerenciamento (existentes)
     const val CHARACTERS_SCREEN = "characters_screen"
     const val UNIVERSES_SCREEN = "universes_screen"
+
+    // Novas rotas para as telas de criação
+    const val CHARACTER_CREATION_SCREEN = "character_creation_screen"
+    const val UNIVERSE_CREATION_SCREEN = "universe_creation_screen"
+    const val ADVENTURE_CREATION_SCREEN = "adventure_creation_screen"
+
 
     fun gameScreen(adventureName: String) = "game_screen/$adventureName"
 }
@@ -53,14 +64,34 @@ fun AppNavigation(gameViewModel: GameViewModel) {
             )
         }
 
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Removido o parâmetro `navController` que já não é necessário.
         composable(AppRoutes.CHARACTERS_SCREEN) {
             CharactersScreen()
         }
 
         composable(AppRoutes.UNIVERSES_SCREEN) {
             UniversesScreen()
+        }
+
+        // Adicionando as novas telas de criação ao grafo de navegação
+        composable(AppRoutes.CHARACTER_CREATION_SCREEN) {
+            CharacterCreationScreen(
+                gameViewModel = gameViewModel,
+                navController = navController
+            )
+        }
+
+        composable(AppRoutes.UNIVERSE_CREATION_SCREEN) {
+            UniverseCreationScreen(
+                gameViewModel = gameViewModel,
+                navController = navController
+            )
+        }
+
+        composable(AppRoutes.ADVENTURE_CREATION_SCREEN) {
+            AdventureCreationScreen(
+                gameViewModel = gameViewModel,
+                navController = navController
+            )
         }
     }
 }

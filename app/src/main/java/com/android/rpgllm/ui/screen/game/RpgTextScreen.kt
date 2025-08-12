@@ -30,6 +30,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import com.android.rpgllm.data.GameState
 import com.android.rpgllm.data.GameTool
 import com.android.rpgllm.data.ToolMenuUiState
+import com.android.rpgllm.ui.screen.home.outlinedTextFieldColors
 
 @Composable
 fun RpgTextScreen(
@@ -79,7 +81,7 @@ fun RpgTextScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .background(Color(0xFF121212))
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         Surface(
@@ -87,7 +89,7 @@ fun RpgTextScreen(
                 .weight(1f)
                 .fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = Color(0xFF212121)
+            color = MaterialTheme.colorScheme.surface
         ) {
             LazyColumn(
                 state = listState,
@@ -96,11 +98,10 @@ fun RpgTextScreen(
                 items(gameState.narrativeLines) { line ->
                     Text(
                         text = line,
-                        color = Color(0xFFE0E0E0),
-                        fontSize = 16.sp,
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge, // Usando o estilo do tema
                         modifier = Modifier.padding(vertical = 2.dp)
+
                     )
                 }
             }
@@ -123,8 +124,8 @@ fun RpgTextScreen(
         if (gameState.isLoading) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth().height(4.dp).padding(bottom = 8.dp),
-                color = Color(0xFF00C853),
-                trackColor = Color(0xFF303030)
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         }
 
@@ -134,17 +135,8 @@ fun RpgTextScreen(
             label = { Text("Digite sua ação ou /tools...") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color(0xFF00C853),
-                unfocusedBorderColor = Color(0xFF616161),
-                cursorColor = Color(0xFF00C853),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedContainerColor = Color(0xFF303030),
-                unfocusedContainerColor = Color(0xFF303030),
-                focusedLabelColor = Color(0xFF00C853),
-                unfocusedLabelColor = Color(0xFF9E9E9E)
-            ),
+            // PARTE MODIFICADA: Usando a função de cores do tema
+            colors = outlinedTextFieldColors(),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { sendAction() }),
             enabled = !gameState.isLoading
@@ -165,7 +157,8 @@ fun ToolMenu(
         contentAlignment = Alignment.Center
     ) {
         if (uiState.isLoading) {
-            CircularProgressIndicator(color = Color(0xFF00C853))
+            // PARTE MODIFICADA
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         } else {
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -175,9 +168,10 @@ fun ToolMenu(
                     Button(
                         onClick = { onToolSelected(tool) },
                         shape = RoundedCornerShape(50),
+                        // PARTE MODIFICADA
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF333333),
-                            contentColor = Color.White
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         ),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {

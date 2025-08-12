@@ -1,5 +1,6 @@
 package com.android.rpgllm.ui.screen.home
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -13,25 +14,48 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.android.rpgllm.data.GameViewModel
+import androidx.navigation.NavController
 import com.android.rpgllm.data.AdventureInfo
+import com.android.rpgllm.data.GameViewModel
+import com.android.rpgllm.navigation.AppRoutes
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdventuresScreen(
     modifier: Modifier = Modifier,
     gameViewModel: GameViewModel,
+    navController: NavController, // <-- PARÂMETRO ADICIONADO AQUI PARA CORRIGIR O ERRO
     onNavigateToGame: (String) -> Unit
 ) {
-    AdventureListContent(
-        modifier = modifier,
-        gameViewModel = gameViewModel,
-        onNavigateToGame = onNavigateToGame
-    )
+    var isFabMenuExpanded by remember { mutableStateOf(false) }
+
+    // A tela agora usa um Scaffold para acomodar o FAB
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        floatingActionButton = {
+            CreationFabMenu(
+                isExpanded = isFabMenuExpanded,
+                onFabClick = { isFabMenuExpanded = !isFabMenuExpanded },
+                onItemClick = { route ->
+                    isFabMenuExpanded = false
+                    navController.navigate(route)
+                }
+            )
+        }
+    ) { innerPadding ->
+        AdventureListContent(
+            // Aplicando o padding do Scaffold e o modifier da animação do Pager
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize(),
+            gameViewModel = gameViewModel,
+            onNavigateToGame = onNavigateToGame
+        )
+    }
 }
 
 @Composable
@@ -41,13 +65,10 @@ private fun AdventureListContent(
     onNavigateToGame: (String) -> Unit
 ) {
     val uiState by gameViewModel.adventureListState.collectAsState()
-    val authState by gameViewModel.authUiState.collectAsState() // Observa o estado de autenticação
+    val authState by gameViewModel.authUiState.collectAsState()
     var contextMenuAdventure by remember { mutableStateOf<AdventureInfo?>(null) }
     var showDeleteDialogFor by remember { mutableStateOf<AdventureInfo?>(null) }
 
-    // --- OTIMIZAÇÃO APLICADA AQUI ---
-    // O efeito agora é acionado pelo estado de autenticação.
-    // A busca por sessões só acontece DEPOIS que o login for confirmado.
     LaunchedEffect(authState.isAuthenticated) {
         if (authState.isAuthenticated) {
             gameViewModel.fetchAdventures()
@@ -68,25 +89,30 @@ private fun AdventureListContent(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFF1E1E1E)),
+        // PARTE MODIFICADA
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
         contentAlignment = Alignment.Center
     ) {
         when {
-            // Mostra o loading se estiver autenticando OU carregando as sessões
-            authState.isLoading || uiState.isLoading -> CircularProgressIndicator(color = Color(0xFF00C853))
+            // PARTE MODIFICADA
+            authState.isLoading || uiState.isLoading -> CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             uiState.errorMessage != null -> Text(
                 text = "Erro ao carregar aventuras:\n${uiState.errorMessage}",
-                color = Color.Red,
+                // PARTE MODIFICADA
+                color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(16.dp)
             )
-            uiState.adventures.isEmpty() && !uiState.isLoading -> Text(
-                "Nenhuma aventura encontrada.\nUse o separador 'Criar' para começar uma nova!",
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
+            uiState.adventures.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center){
+                    Text(
+                        "Nenhuma aventura encontrada.\nToque no botão '+' para começar uma nova!",
+                        // PARTE MODIFICADA
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -115,6 +141,66 @@ private fun AdventureListContent(
     }
 }
 
+@Composable
+fun CreationFabMenu(
+    isExpanded: Boolean,
+    onFabClick: () -> Unit,
+    onItemClick: (String) -> Unit
+) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        AnimatedVisibility(visible = isExpanded) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                FabMenuItem(
+                    text = "Aventura",
+                    icon = Icons.Default.AutoStories,
+                    onClick = { onItemClick(AppRoutes.ADVENTURE_CREATION_SCREEN) }
+                )
+                FabMenuItem(
+                    text = "Universo",
+                    icon = Icons.Default.Public,
+                    onClick = { onItemClick(AppRoutes.UNIVERSE_CREATION_SCREEN) }
+                )
+                FabMenuItem(
+                    text = "Personagem",
+                    icon = Icons.Default.Person,
+                    onClick = { onItemClick(AppRoutes.CHARACTER_CREATION_SCREEN) }
+                )
+            }
+        }
+        FloatingActionButton(
+            onClick = onFabClick,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Icon(
+                if (isExpanded) Icons.Default.Close else Icons.Default.Add,
+                contentDescription = "Criar"
+            )
+        }
+    }
+}
+
+@Composable
+fun FabMenuItem(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 4.dp
+        ) {
+            Text(text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
+        }
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            Icon(icon, contentDescription = text)
+        }
+    }
+}
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -133,21 +219,23 @@ fun AdventureCard(
                     onClick = onClick,
                     onLongClick = onLongClick
                 ),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A2A)),
+            // PARTE MODIFICADA
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     text = adventure.playerName,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    // PARTE MODIFICADA
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = adventure.worldConcept,
-                    color = Color.Gray,
-                    fontSize = 14.sp,
+                    // PARTE MODIFICADA
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2
                 )
             }
@@ -162,19 +250,20 @@ fun AdventureContextMenu(
     onDismiss: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val context = LocalContext.current
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss
     ) {
         DropdownMenuItem(
-            text = { Text("Excluir Aventura", color = Color.Red) },
+            // PARTE MODIFICADA
+            text = { Text("Excluir Aventura", color = MaterialTheme.colorScheme.error) },
             onClick = onDeleteClick,
             leadingIcon = {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Excluir Aventura",
-                    tint = Color.Red
+                    // PARTE MODIFICADA
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         )
@@ -194,7 +283,8 @@ fun DeleteConfirmationDialog(
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                // PARTE MODIFICADA
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
                 Text("Excluir")
             }
